@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import {VRButton} from 'three/addons/webxr/VRButton.js';
 
 const maxPixelCount = 3840 * 2160;
 
@@ -10,15 +11,20 @@ const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerH
 const canvas = document.getElementById("scene");
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
+renderer.xr.enabled = true;
+document.body.appendChild(VRButton.createButton(renderer));
 
-const controls = new OrbitControls(camera, renderer.domElement);
+// const controls = new OrbitControls(camera, renderer.domElement);
 
 const geometry = new THREE.BoxGeometry(1, 1, 1);
 const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 const cube = new THREE.Mesh(geometry, material);
 scene.add(cube);
 
-camera.position.z = 3;
+camera.position.set(0, 1.6, 0);
+
+cube.position.y = 1.6;
+cube.position.z = -2;
 
 function resizeRenderer(renderer) {
     const canvas = renderer.domElement;
@@ -54,9 +60,7 @@ function render(time) {
         camera.aspect = canvas.clientWidth / canvas.clientHeight;
         camera.updateProjectionMatrix();
     }
-
-    requestAnimationFrame(render);
 }
 
-requestAnimationFrame(render);
+renderer.setAnimationLoop(render);
 
