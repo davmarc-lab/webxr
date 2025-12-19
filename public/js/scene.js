@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+// import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const maxPixelCount = 3840 * 2160;
 
@@ -11,7 +11,7 @@ const canvas = document.getElementById("scene");
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
 
-const controls = new OrbitControls(camera, renderer.domElement);
+// const controls = new OrbitControls(camera, renderer.domElement);
 
 const geometry = new THREE.BoxGeometry(1, 1, 1);
 const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
