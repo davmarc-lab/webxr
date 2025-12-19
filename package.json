@@ -1,0 +1,28 @@
+{
+    "name": "webxr",
+    "version": "1.0.0",
+    "description": "",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "npx vite",
+        "expose": "npx vite --host"
+    },
+    "dependencies": {
+        "cookie-parser": "~1.4.4",
+        "debug": "~2.6.9",
+        "express": "^4.22.1",
+        "http-errors": "~1.6.3",
+        "morgan": "^1.10.1",
+        "servez": "^2.3.2",
+        "three": "^0.182.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.11",
+        "vite": "^7.3.0"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "module"
+}
