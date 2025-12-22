@@ -36,3 +36,10 @@ const options = {
 const server = https.createServer(options, app);
 server.listen(8080);
 
+function log(data) {
+    console.log(data);
+}
+
+export {
+    log
+}
