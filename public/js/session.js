@@ -8,11 +8,11 @@ function initXr(navigator) {
         new WebXRPolyfill();
 }
 
-async function requestSession(xr, type) {
+async function isSupported(xr, type) {
     return await xr.isSessionSupported(type);
 }
 
 export {
     initXr,
-    requestSession
+    isSupported
 }

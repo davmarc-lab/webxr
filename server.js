@@ -10,6 +10,7 @@ import https from 'https'
 
 import indexRouter from './routes/index.js';
 import notFoundRouter from './routes/notFound.js';
+import logsRouter from './routes/logs.js';
 
 // Create Vite server in middleware mode
 const vite = await createViteServer({
@@ -20,14 +21,17 @@ const vite = await createViteServer({
     // don't include Vite's default HTML handling middlewares
     appType: 'custom',
 });
+
 // Use vite's connect instance as middleware
 app.use(vite.middlewares);
 
 // app routers
 app.use(indexRouter);
 app.use(notFoundRouter);
+app.use(logsRouter);
 
 app.listen(3000);
+console.log("Http opening port: 3000");
 
 const options = {
     key: fs.readFileSync("./localhost-key.pem"),
@@ -35,11 +39,4 @@ const options = {
 }
 const server = https.createServer(options, app);
 server.listen(8080);
-
-function log(data) {
-    console.log(data);
-}
-
-export {
-    log
-}
+console.log("Https opening port: 8080");
