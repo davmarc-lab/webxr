@@ -1,0 +1,19 @@
+{
+    "name": "vite",
+    "version": "1.0.0",
+    "description": "",
+    "scripts": {
+        "dev": "vite --host"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "devDependencies": {
+        "js-aruco2": "^2.0.0",
+        "three": "^0.182.0",
+        "ufo": "^1.6.1",
+        "vite": "^7.3.0",
+        "webxr-polyfill": "^2.0.3"
+    }
+}
