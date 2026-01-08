@@ -8,9 +8,7 @@
     <script type="importmap">
         {
             "imports": {
-                "three": "/node_modules/three/build/three.module.js",
-                "three/addons/": "/node_modules/three/examples/jsm/",
-                "webxr-polyfill": "/node_modules/webxr-polyfill/build/webxr-polyfill.module.js"
+                "posit": "/node_modules/js-aruco2/src/posit1.js"
             }
         }
     </script>
@@ -20,6 +18,7 @@
 <body>
     <script type="module" src="/index.js"></script>
     <canvas id="scene"></canvas>
+    <video id="video" style="display:none" autoplay playsinline></video>
 </body>
 
 </html>

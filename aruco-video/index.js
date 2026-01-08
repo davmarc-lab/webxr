@@ -33,6 +33,21 @@ const renderer = new THREE.WebGLRenderer({
     preserveDrawingBuffer: true
 });
 renderer.xr.enabled = true;
+// renderer.setClearColor(new THREE.Color(0, 0, 0));
+
+const video = document.getElementById("video");
+// const textureVideo = new THREE.VideoTexture(video);
+// textureVideo.colorSpace = THREE.SRGBColorSpace;
+
+// get user camera stream
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({
+        video: {}
+    }).then(stream => {
+        video.srcObject = stream;
+        video.play();
+    });
+}
 
 // Simple test object (not marker-related)
 let material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
@@ -60,7 +75,8 @@ function render(time) {
     renderer.render(scene, camera);
 
     // detect very 100 frames
-    if (renderer.info.render.frame % 100 == 0) {
+    if (renderer.info.render.frame % 200 == 0) {
+
         material.map = map;
         cube.material.map.needsUpdate = true;
 
