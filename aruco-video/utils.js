@@ -65,7 +65,7 @@ function videoSnapshot(video) {
 
 function evaluateMarkers(markers) {
     markers.forEach(m => {
-        console.log(m.corners)
+        console.log(m)
     });
 }
 export {
