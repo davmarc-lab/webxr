@@ -1,11 +1,6 @@
 import * as THREE from 'three';
 
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { ARButton } from 'three/addons/webxr/ARButton.js';
-
 import { AR } from 'js-aruco2'
-
-import * as xrutils from './session.js'
 
 import * as Utils from './utils.js'
 
@@ -13,89 +8,103 @@ function log(message) {
     fetch(`/log?${encodeURI(message)}`);
 }
 
-// ---- js-aruco setup  ----
-const detector = new AR.Detector({
-    dictionaryName: "ARUCO"
-});
-console.log("js-aruco ready");
+const FOV = 75;
+const NEAR = 0.1;
+const FAR = 100;
 
-const canvas = document.getElementById("scene");
-
-// ---- Three.js setup ----
-const scene = new THREE.Scene();
-
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 1.6, 5);
-
-const renderer = new THREE.WebGLRenderer({
-    canvas: canvas,
-    antialias: true,
-    preserveDrawingBuffer: true
-});
-renderer.xr.enabled = true;
-// renderer.setClearColor(new THREE.Color(0, 0, 0));
+const maxPixelCount = 3840 * 2160;
 
 const video = document.getElementById("video");
-// const textureVideo = new THREE.VideoTexture(video);
-// textureVideo.colorSpace = THREE.SRGBColorSpace;
+video.hidden = true;
 
-// get user camera stream
+// get user camera stream if available
 if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     navigator.mediaDevices.getUserMedia({
-        video: {}
+        audio: false,
+        video: {
+            facingMode: "environment"
+        }
     }).then(stream => {
         video.srcObject = stream;
         video.play();
+        video.onplay = _ => {
+            video.classList.add("visible");
+        };
     });
 }
 
-// Simple test object (not marker-related)
-let material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-let cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
-cube.position.z = -3;
-scene.add(cube);
+// aruco detector
+const detector = new AR.Detector({
+    dictionaryName: "ARUCO"
+});
 
-document.body.appendChild(ARButton.createButton(renderer, {
-    requiredFeatures: ["unbounded"]
-}));
+// threejs context
+const canvas = document.getElementById("scene");
 
-// image
-var map = new THREE.TextureLoader().load("marker.png");
+const renderer = new THREE.WebGLRenderer({ antialias: false, canvas: canvas });
 
-window.addEventListener('resize', Utils.resizeRenderer(renderer, camera));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
+camera.position.z = 5;
 
-// ---- Render loop ----
+canvas.addEventListener('resize', resizeRenderer());
+
+function resizeRenderer() {
+    const canvas = renderer.domElement;
+    const pixelRatio = window.devicePixelRatio;
+    let width = Math.floor(canvas.clientWidth * pixelRatio);
+    let height = Math.floor(canvas.clientHeight * pixelRatio);
+    const pixelCount = width * height;
+
+    let renderScale = 1;
+    if (pixelCount > maxPixelCount) {
+        renderScale = Math.sqrt(maxPixelCount / pixelCount);
+    }
+
+    width = Math.floor(width * renderScale);
+    height = Math.floor(height * renderScale);
+
+    const needResize = canvas.width !== width || canvas.height !== height;
+    if (needResize) {
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height, false);
+    }
+}
+
 function render(time) {
-    time *= 0.001;
+    // render the webcam video as scene background
+    const videoImage = Utils.videoSnapshot(video);
+    scene.background = videoImage;
+    scene.background.needsUpdate = true;
 
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
-
-    // render to the canvas
-    renderer.render(scene, camera);
-
-    // detect very 100 frames
-    if (renderer.info.render.frame % 200 == 0) {
-
-        material.map = map;
-        cube.material.map.needsUpdate = true;
-
+    if (renderer.info.render.frame % 100 == 0) {
+        // retrieve the current render target
         const oldRt = renderer.getRenderTarget();
+        // retrieve the image data of the current scene state
+        // render on a different render target the scene content (camera as background)
         const imageData = Utils.snapshot(renderer, camera, scene);
+        // restore the old render target
         renderer.setRenderTarget(oldRt);
 
-        // send this image data to another page and render the result
+        // detect aruco markers
         var markers = detector.detect(imageData);
         console.log("Markers found: " + markers.length);
         log("Markers found: " + markers.length);
 
-        Utils.evaluateMarkers(markers);
+        markers.forEach(m => {
+            const corners = m.corners;
+            corners.forEach(c => log(c.x + ", " + c.y));
+        });
     }
+
+    // render scene
+    renderer.render(scene, camera);
 }
 
-function loop(time, _) {
-    // update(time);
-    render(time)
+function loop(time) {
+    time *= 0.001;
+    render(time);
 }
 
 renderer.setAnimationLoop(loop);

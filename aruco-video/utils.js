@@ -57,6 +57,12 @@ function snapshot(renderer, camera, scene) {
     ));
 }
 
+function videoSnapshot(video) {
+    const texture = new THREE.VideoTexture(video);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+}
+
 function evaluateMarkers(markers) {
     markers.forEach(m => {
         console.log(m.corners)
@@ -66,5 +72,6 @@ export {
     resizeRenderer,
     flipImageVertically,
     snapshot,
+    videoSnapshot,
     evaluateMarkers
 }
