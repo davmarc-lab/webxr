@@ -15,11 +15,17 @@ function log(message) {
 
 const maxPixelCount = 3840 * 2160;
 
-let scene, camera, canvas, renderer;
+let scene, camera, renderer;
+
 let isSupported = false;
 const type = "immersive-ar";
 let backMap;
 const modelSize = 100;
+
+const canvas = document.getElementById("scene");
+const video = document.getElementById("video");
+video.hidden = true;
+const enableVideo = navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
 
 // aruco detector
 const detector = new AR.Detector({
@@ -44,24 +50,26 @@ async function init() {
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 5;
 
-    canvas = document.getElementById("scene");
+    // get user camera stream if available
+    // const enableVideo = false;
+    if (enableVideo) {
+        navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                facingMode: "environment"
+            }
+        }).then(stream => {
+            video.srcObject = stream;
+            video.play();
+            video.onplay = _ => {
+                video.classList.add("visible");
+            };
+        });
+    }
 
     renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
-    // renderer.xr.enabled = true;
 
-    // xrutils.initXr(navigator);
-    // const xr = navigator.xr;
-
-    // isSupported = await xrutils.isSupported(xr, type);
-
-    if (isSupported) {
-        // document.body.appendChild(ARButton.createButton(renderer, {
-        //     requiredFeatures: features
-        // }));
-        // camera.position.set(0, 1.6, 2);
-    } else {
-        const controls = new OrbitControls(camera, renderer.domElement);
-    }
+    const controls = new OrbitControls(camera, renderer.domElement);
 
     // background image
     backMap = new THREE.TextureLoader().load("arena.png");
@@ -76,14 +84,7 @@ async function init() {
 
     const btnCalibrate = document.getElementById("calibrate");
     btnCalibrate.addEventListener('click', _ => {
-        // take screen
-        // retrieve the current render target
-        const oldRt = renderer.getRenderTarget();
-        // retrieve the image data of the current scene state
-        // render on a different render target the scene content (camera as background)
-        const imageData = Utils.snapshot(renderer, camera, scene);
-        // restore the old render target
-        renderer.setRenderTarget(oldRt);
+        const imageData = Utils.videoSnapshot(video);
 
         // detect markers
         const markers = detector.detect(imageData);
@@ -136,6 +137,10 @@ function update(time) {
 
 function render(time) {
     time *= 0.001;  // convert time to seconds
+
+    const videoImage = Utils.videoSnapshot(video);
+    scene.background = videoImage;
+    scene.background.needsUpdate = true;
 
     renderer.render(scene, camera);
 }
