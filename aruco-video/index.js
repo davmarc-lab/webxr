@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 import { ARButton } from 'three/addons/webxr/ARButton.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 import { AR } from 'js-aruco2'
 
@@ -32,12 +33,12 @@ let tracked = [];
 // threejs context
 const canvas = document.getElementById("scene");
 
-const renderer = new THREE.WebGLRenderer({ antialias: false, canvas: canvas });
+const renderer = new THREE.WebGLRenderer({ antialias: false, canvas: canvas, preserveDrawingBuffer: true });
 renderer.xr.enabled = true;
 let xrBinding = null;
 
 document.body.appendChild(ARButton.createButton(renderer, {
-    requiredFeatures: ["camera-access"]
+    // requiredFeatures: ["camera-access"]
 }));
 
 const scene = new THREE.Scene();
@@ -76,13 +77,9 @@ function resizeRenderer() {
 }
 
 const cameraScene = new THREE.Scene();
-const cameraMat = new THREE.SpriteMaterial({ color: 0x00ff00 });
-const cameraSprite = new THREE.Sprite(cameraMat);
-cameraSprite.scale.x = 3;
-cameraSprite.scale.y = 3;
-cameraScene.add(cameraSprite);
 
 let first = true;
+let texture;
 function render(time) {
     // render scene
     renderer.render(scene, camera);
@@ -93,16 +90,20 @@ function render(time) {
             return;
         }
         // update camera sprite texture
-        let texture;
         const frame = renderer.xr.getFrame();
         const rf = renderer.xr.getReferenceSpace();
         if (frame && rf) {
             const viewPose = frame.getViewerPose(rf);
             if (viewPose) {
-                const view = viewPose.views[0].camera;
+                const view = viewPose.views[0].eye;
                 texture = renderer.xr.getCameraTexture(view);
-                cameraSprite.material.map = texture;
-                cameraSprite.material.needsUpdate = true;
+
+                cameraScene.background = texture;
+                scene.background = cube.material;
+                scene.background.needsUpdate = true;
+                // cameraScene.background.needsUpdate = true;
+                console.log("cameraScene back update");
+                log("cameraScene back update");
 
                 //-------ERROR-------
                 // texture is ok, there could be a problem when rendering on another render target
@@ -120,8 +121,8 @@ function render(time) {
                 // detect aruco markers
                 if (texture !== undefined) {
                     // debug camera image
-                    cube.material.map = texture;
-                    cube.material.needsUpdate = true;
+                    // cube.material.map = imageData;
+                    // cube.material.needsUpdate = true;
 
                     const markers = detector.detect(imageData);
                     log("Markers found: " + markers.length);
