@@ -57,41 +57,7 @@ class Arena {
         return this.origin;
     }
 
-    getArenaRotationMatrix() {
-        // distance from each point
-        const dists = [];
-        for (let i = 0; i < this.corners.length; i++) {
-            for (let j = i + 1; j < this.corners.length; j++) {
-                dists.push({ i, j, d: this.corners[i].distanceTo(this.corners[j]) });
-            }
-        }
-
-        // sort by distance descending
-        dists.sort((x, y) => y.d - x.d);
-
-        // choose one point as origin for detection
-        const originIndex = dists[0].i;
-        const origin = this.corners[originIndex];
-
-        // find adjacent points around origin
-        // order point distance ascending
-        const neighbors = dists.filter(p => p.i === originIndex || p.j === originIndex)
-            .sort((x, y) => x.d - y.d);
-
-        const i1 = neighbors[0].i === originIndex ? neighbors[0].j : neighbors[0].i;
-        const i2 = neighbors[1].i === originIndex ? neighbors[1].j : neighbors[1].i;
-
-        const p1 = this.corners[i1];
-        const p2 = this.corners[i2];
-
-        const edgeX = new THREE.Vector3().subVectors(p1, origin).normalize();
-        const edgeY = new THREE.Vector3().subVectors(p2, origin).normalize();
-        const edgeZ = new THREE.Vector3().crossVectors(edgeX, edgeY).normalize();
-
-        console.log(edgeX);
-        console.log(edgeY);
-        console.log(edgeZ);
-
+    getArenaRotationMatrix(camera, width, height) {
     }
 
     addRobot(position, color) {

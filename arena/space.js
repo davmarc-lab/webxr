@@ -19,6 +19,7 @@ const maxPixelCount = 3840 * 2160;
 const FOV = 75;
 const NEAR = 0.1;
 const FAR = 1000;
+const ROBOT_SCALE = 0.1;
 
 let scene, camera, renderer, arena;
 
@@ -59,8 +60,6 @@ async function init() {
     // add arena to the scene
     scene.add(arena.getArena());
 
-    arena.getArenaRotationMatrix();
-
     const ambientLight = new THREE.AmbientLight(0xffffff);
     scene.add(ambientLight);
 
@@ -74,15 +73,15 @@ async function init() {
 
     loader.load('/assets/robot.gltf', function (gltf) {
         robotGroup = gltf.scene;
-        var scale = 0.1;
-        robotGroup.scale.set(scale, scale, scale)
+        robotGroup.scale.set(ROBOT_SCALE, ROBOT_SCALE, ROBOT_SCALE)
+        const axis = rutils.createAxis();
+        const axisScale = 100 * (1 - ROBOT_SCALE);
+        axis.scale.set(axisScale, axisScale, axisScale);
+        robotGroup.add(axis);
         scene.add(robotGroup);
-
-
     }, undefined, function (error) {
         console.error(error);
     });
-
 }
 
 function update(time) {
