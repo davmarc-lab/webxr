@@ -1,54 +1,27 @@
 import * as THREE from 'three';
 
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { ARButton } from 'three/addons/webxr/ARButton.js';
+import { CASTER_SCALE, ROB_SCALE, createCube, createRobot, createAxis } from "./helper";
 
-import { AR } from 'js-aruco2'
-
-import * as xrutils from './session.js'
-
-import * as Utils from './utils.js'
-
-function log(message) {
-    fetch(`/log?${encodeURI(message)}`);
-}
-
-const maxPixelCount = 3840 * 2160;
-const FOV = 75;
-const NEAR = 0.1;
-const FAR = 1000;
-
-let scene, camera, renderer, arena;
-const canvas = document.getElementById("scene");
-
-const ORIGIN = new THREE.Vector3(0, 0, 0);
-const CASTER_SCALE = new THREE.Vector3(50, 50, 50);
-
-const cubeGeom = new THREE.BoxGeometry(1, 1, 1);
-const cubeMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-function createCube(position, scale) {
-    const c = new THREE.Mesh(cubeGeom, cubeMat);
-
-    if (position === undefined) return c;
-    c.position.set(position.x, position.y, position.z);
-
-    if (scale === undefined) return c;
-    c.scale.set(scale.x, scale.y, scale.z);
-
-    return c;
-}
 class Arena {
     constructor(corners) {
         if (corners === undefined) throw new Error("Missing arena corners");
         if (corners.length != 4) throw new Error("Corners must be of size 4 -> given `" + corners.length + "`");
 
         this.corners = corners;
+        this.casters = [];
+        this.arena = new THREE.Object3D();
+
+        this.origin = new THREE.Vector3(0, 0, 0);
+        this.isOriginOk = false;
+
+        this.robots = [];
     }
 
-    // casters are arena meshes on the area corners
+    // casters are cube meshes on the area corners
     createCasters() {
-        this.casters = [];
         this.corners.forEach(c => this.casters.push(createCube(c, CASTER_SCALE)));
+        this.casters.forEach(c => this.arena.add(c));
+        this.casters.forEach(e => e.add(createAxis()));
     }
 
     getCasters() {
@@ -58,15 +31,89 @@ class Arena {
         return this.casters;
     }
 
-    getCorners() {
-        return this.corners;
+    getCorners() { return this.corners; }
+
+    getArena() { return this.arena; }
+
+    getArenaOrigin() {
+        if (!this.isOriginOk) return this.estimateArenaOrigin();
+
+        return this.origin;
     }
 
+    getRobots() { return this.robots; }
+
     estimateArenaOrigin() {
+        if (this.isOriginOk) return this.origin;
+
         const x = this.#calculateCentroid(this.corners.map(p => p.x));
         const y = this.#calculateCentroid(this.corners.map(p => p.y));
         const z = this.#calculateCentroid(this.corners.map(p => p.z));
-        return new THREE.Vector3(x, y, z);
+
+        this.origin = new THREE.Vector3(x, y, z);
+        this.isOriginOk = true;
+        this.arena.position.set(this.origin.x, this.origin.y, this.origin.z);
+
+        return this.origin;
+    }
+
+    getArenaRotationMatrix() {
+        // distance from each point
+        const dists = [];
+        for (let i = 0; i < this.corners.length; i++) {
+            for (let j = i + 1; j < this.corners.length; j++) {
+                dists.push({ i, j, d: this.corners[i].distanceTo(this.corners[j]) });
+            }
+        }
+
+        // sort by distance descending
+        dists.sort((x, y) => y.d - x.d);
+
+        // choose one point as origin for detection
+        const originIndex = dists[0].i;
+        const origin = this.corners[originIndex];
+
+        // find adjacent points around origin
+        // order point distance ascending
+        const neighbors = dists.filter(p => p.i === originIndex || p.j === originIndex)
+            .sort((x, y) => x.d - y.d);
+
+        const i1 = neighbors[0].i === originIndex ? neighbors[0].j : neighbors[0].i;
+        const i2 = neighbors[1].i === originIndex ? neighbors[1].j : neighbors[1].i;
+
+        const p1 = this.corners[i1];
+        const p2 = this.corners[i2];
+
+        const edgeX = new THREE.Vector3().subVectors(p1, origin).normalize();
+        const edgeY = new THREE.Vector3().subVectors(p2, origin).normalize();
+        const edgeZ = new THREE.Vector3().crossVectors(edgeX, edgeY).normalize();
+
+        console.log(edgeX);
+        console.log(edgeY);
+        console.log(edgeZ);
+
+    }
+
+    addRobot(position, color) {
+        if (position === undefined) {
+            console.error("[ERROR] position cannot be empty");
+            return;
+        }
+
+        // get arena origin point
+        if (!this.isOriginOk) this.estimateArenaOrigin();
+
+        // calc robot position
+        const robotPos = new THREE.Vector3().addVectors(this.origin, position);
+
+        const r = createRobot(position, ROB_SCALE);
+        if (color !== undefined) {
+            r.material.color = color;
+        }
+        r.add(createAxis());
+        this.robots.push(r);
+
+        this.arena.add(r);
     }
 
     #calculateCentroid(points) {
@@ -76,49 +123,11 @@ class Arena {
         }
         if (points.length == 1) return points[0];
 
-        return points.reduce((acc, val, _) => acc + val);
+        // https://en.wikipedia.org/wiki/Centroid#Of_a_finite_set_of_points
+        return points.reduce((acc, val, _) => acc + val) / points.length;
     }
 }
 
-let entities = [];
-
-const LEFT_TOP = new THREE.Vector3(-100, 100, -100);
-const LEFT_BOT = new THREE.Vector3(-100, -100, -100);
-const RIGHT_TOP = new THREE.Vector3(50, 100, -100);
-const RIGHT_BOT = new THREE.Vector3(50, -100, -100);
-
-async function init() {
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
-    camera.position.z = 5;
-
-    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
-    const controls = new OrbitControls(camera, renderer.domElement);
-
-    arena = new Arena([LEFT_TOP, LEFT_BOT, RIGHT_TOP, RIGHT_BOT]);
-    arena.createCasters();
-    arena.getCasters().forEach(c => scene.add(c));
-
+export {
+    Arena
 }
-
-function update(time) {
-    time *= 0.001;  // convert time to seconds
-}
-
-function render(time) {
-    time *= 0.001;  // convert time to seconds
-
-    renderer.render(scene, camera);
-}
-
-function loop(time) {
-    update(time);
-    render(time);
-}
-
-await init();
-
-canvas.addEventListener('resize', Utils.resizeRenderer(renderer, camera));
-
-renderer.setAnimationLoop(loop);
-

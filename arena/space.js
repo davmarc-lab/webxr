@@ -1,0 +1,110 @@
+import * as THREE from 'three';
+
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { ARButton } from 'three/addons/webxr/ARButton.js';
+
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+import * as rutils from './helper.js'
+
+import { Arena } from './arena.js'
+
+import * as Utils from './utils.js'
+
+function log(message) {
+    fetch(`/log?${encodeURI(message)}`);
+}
+
+const maxPixelCount = 3840 * 2160;
+const FOV = 75;
+const NEAR = 0.1;
+const FAR = 1000;
+
+let scene, camera, renderer, arena;
+
+let robotGroup;
+
+const canvas = document.getElementById("scene");
+
+const loader = new GLTFLoader();
+
+let entities = [];
+
+// DEFAULT CASE
+// const LEFT_TOP = new THREE.Vector3(-100, 100, -100);
+// const LEFT_BOT = new THREE.Vector3(-100, -100, -100);
+// const RIGHT_TOP = new THREE.Vector3(50, 100, -100);
+// const RIGHT_BOT = new THREE.Vector3(50, -100, -100);
+
+const LEFT_TOP = new THREE.Vector3(-100, 30, 100);
+const LEFT_BOT = new THREE.Vector3(-100, 100, -100);
+const RIGHT_TOP = new THREE.Vector3(-100, 100, 100);
+const RIGHT_BOT = new THREE.Vector3(-100, 30, -100);
+
+async function init() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
+    camera.position.z = 5;
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
+    const controls = new OrbitControls(camera, renderer.domElement);
+
+    arena = new Arena([LEFT_TOP, LEFT_BOT, RIGHT_TOP, RIGHT_BOT]);
+    arena.createCasters();
+
+    arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
+    arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
+    arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
+
+    // add arena to the scene
+    scene.add(arena.getArena());
+
+    arena.getArenaRotationMatrix();
+
+    const ambientLight = new THREE.AmbientLight(0xffffff);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff);
+    directionalLight.position.set(10, 10, 20).normalize();
+    scene.add(directionalLight);
+
+    const pointLight = new THREE.PointLight(0xffffff, 5, 1);
+    pointLight.position.set(10, 10, 20); // Set the position of the light
+    scene.add(pointLight);
+
+    loader.load('/assets/robot.gltf', function (gltf) {
+        robotGroup = gltf.scene;
+        var scale = 0.1;
+        robotGroup.scale.set(scale, scale, scale)
+        scene.add(robotGroup);
+
+
+    }, undefined, function (error) {
+        console.error(error);
+    });
+
+}
+
+function update(time) {
+    time *= 0.001;  // convert time to seconds
+    if (robotGroup !== undefined)
+        robotGroup.rotation.y = time;
+}
+
+function render(time) {
+    time *= 0.001;  // convert time to seconds
+
+    renderer.render(scene, camera);
+}
+
+function loop(time) {
+    update(time);
+    render(time);
+}
+
+await init();
+
+canvas.addEventListener('resize', Utils.resizeRenderer(renderer, camera));
+
+renderer.setAnimationLoop(loop);
+
