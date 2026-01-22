@@ -23,9 +23,6 @@ let backMap;
 const modelSize = 100;
 
 const canvas = document.getElementById("scene");
-const video = document.getElementById("video");
-video.hidden = true;
-const enableVideo = navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
 
 // aruco detector
 const detector = new AR.Detector({
@@ -52,20 +49,6 @@ async function init() {
 
     // get user camera stream if available
     // const enableVideo = false;
-    if (enableVideo) {
-        navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-                facingMode: "environment"
-            }
-        }).then(stream => {
-            video.srcObject = stream;
-            video.play();
-            video.onplay = _ => {
-                video.classList.add("visible");
-            };
-        });
-    }
 
     renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
 
