@@ -2,7 +2,13 @@ import * as THREE from 'three';
 
 import { Robot } from './robot'
 
-import { CASTER_SCALE, createCube, createRobotMesh, createAxis } from "./helper";
+import { createCube, createRobotMesh, createAxis } from "./helper";
+
+/**
+ * Corner caster scale vector.
+ * @type {THREE.Vector3}
+ */
+const CASTER_SCALE = new THREE.Vector3(50, 50, 50);
 
 /**
  * Enum-like class representing valid corner locations.
