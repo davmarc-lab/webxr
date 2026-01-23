@@ -3,15 +3,34 @@
  */
 class Robot {
     /**
+     * Robot id.
+     * @type {number}
+     */
+    #id;
+
+    /**
+     * Robot gltf loaded group.
+     * @type {THREE.Group}
+     */
+    mesh;
+
+    /**
      * Creates a new Robot instance.
      *
      * @param {number} id Unique numeric identifier for the robot.
-     * @param {THREE.Object3D} mesh The robot's 3D mesh loaded via GLTFLoader.
+     * @param {THREE.Group} mesh The robot's 3D mesh loaded via GLTFLoader.
      */
     constructor(id, mesh) {
         this.id = id;
         this.mesh = mesh;
     }
+
+    /**
+     * Retrieves the robot id given by the {@link Arena}.
+     * 
+     * @returns {number} The robot id.
+     */
+    getId() { return this.id; }
 }
 
 export {
