@@ -3,11 +3,9 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
 import * as rutils from './helper.js'
 
-import { Arena } from './arena.js'
+import { Location, Corner, Arena } from './arena.js'
 
 import * as Utils from './utils.js'
 
@@ -19,7 +17,6 @@ const maxPixelCount = 3840 * 2160;
 const FOV = 75;
 const NEAR = 0.1;
 const FAR = 1000;
-const ROBOT_SCALE = 0.1;
 
 let scene, camera, renderer, arena;
 
@@ -27,20 +24,18 @@ let robotGroup;
 
 const canvas = document.getElementById("scene");
 
-const loader = new GLTFLoader();
-
 let entities = [];
 
 // DEFAULT CASE
-// const LEFT_TOP = new THREE.Vector3(-100, 100, -100);
-// const LEFT_BOT = new THREE.Vector3(-100, -100, -100);
-// const RIGHT_TOP = new THREE.Vector3(50, 100, -100);
-// const RIGHT_BOT = new THREE.Vector3(50, -100, -100);
+const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_LEFT);
+const LEFT_BOT = new Corner(new THREE.Vector3(-100, -100, -100), Location.BOT_LEFT);
+const RIGHT_TOP = new Corner(new THREE.Vector3(50, 100, -100), Location.TOP_RIGHT);
+const RIGHT_BOT = new Corner(new THREE.Vector3(50, -100, -100), Location.BOT_RIGHT);
 
-const LEFT_TOP = new THREE.Vector3(-100, 30, 100);
-const LEFT_BOT = new THREE.Vector3(-100, 100, -100);
-const RIGHT_TOP = new THREE.Vector3(-100, 100, 100);
-const RIGHT_BOT = new THREE.Vector3(-100, 30, -100);
+// const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, 100), Location.TOP_LEFT);
+// const LEFT_BOT = new Corner(new THREE.Vector3(-100, 30, 100), Location.BOT_LEFT);
+// const RIGHT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_RIGHT);
+// const RIGHT_BOT = new Corner(new THREE.Vector3(-100, 30, -100), Location.BOT_RIGHT);
 
 async function init() {
     scene = new THREE.Scene();
@@ -53,9 +48,9 @@ async function init() {
     arena = new Arena([LEFT_TOP, LEFT_BOT, RIGHT_TOP, RIGHT_BOT]);
     arena.createCasters();
 
-    arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
-    arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
-    arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
+    await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
+    await arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
+    await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
 
     // add arena to the scene
     scene.add(arena.getArena());
@@ -71,16 +66,9 @@ async function init() {
     pointLight.position.set(10, 10, 20); // Set the position of the light
     scene.add(pointLight);
 
-    loader.load('/assets/robot.gltf', function (gltf) {
-        robotGroup = gltf.scene;
-        robotGroup.scale.set(ROBOT_SCALE, ROBOT_SCALE, ROBOT_SCALE)
-        const axis = rutils.createAxis();
-        const axisScale = 100 * (1 - ROBOT_SCALE);
-        axis.scale.set(axisScale, axisScale, axisScale);
-        robotGroup.add(axis);
-        scene.add(robotGroup);
-    }, undefined, function (error) {
-        console.error(error);
+    const btnProject = document.getElementById("project");
+    btnProject.addEventListener('click', _ => {
+        arena.getArenaAxis(camera, renderer.domElement.width, renderer.domElement.height);
     });
 }
 
