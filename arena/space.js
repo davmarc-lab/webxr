@@ -1,30 +1,18 @@
 import * as THREE from 'three';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { ARButton } from 'three/addons/webxr/ARButton.js';
-
-import * as rutils from './helper.js'
 
 import { Location, Corner, Arena } from './arena.js'
 
-import * as Utils from './utils.js'
+import * as Utils from './sceneUtils'
 
-function log(message) {
-    fetch(`/log?${encodeURI(message)}`);
-}
-
-const maxPixelCount = 3840 * 2160;
 const FOV = 75;
 const NEAR = 0.1;
 const FAR = 1000;
 
 let scene, camera, renderer, arena;
 
-let robotGroup;
-
 const canvas = document.getElementById("scene");
-
-let entities = [];
 
 // DEFAULT CASE
 // const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_LEFT);
@@ -65,16 +53,13 @@ async function init() {
     // add arena to the scene
     scene.add(arena.getArena());
 
+    // adds lights due to robot model material
     const ambientLight = new THREE.AmbientLight(0xffffff);
     scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff);
     directionalLight.position.set(10, 10, 20).normalize();
     scene.add(directionalLight);
-
-    const pointLight = new THREE.PointLight(0xffffff, 5, 1);
-    pointLight.position.set(10, 10, 20); // Set the position of the light
-    scene.add(pointLight);
 
     const btnProject = document.getElementById("project");
     btnProject.addEventListener('click', _ => {
@@ -84,8 +69,6 @@ async function init() {
 
 function update(time) {
     time *= 0.001;  // convert time to seconds
-    if (robotGroup !== undefined)
-        robotGroup.rotation.y = time;
 }
 
 function render(time) {

@@ -24,6 +24,7 @@ function resizeRenderer(renderer, camera) {
         renderer.setSize(width, height, false);
     }
 }
+
 function flipImageVertically(image) {
     const { width, height, data } = image;
     const rowSize = width * 4;
