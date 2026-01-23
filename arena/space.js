@@ -27,15 +27,25 @@ const canvas = document.getElementById("scene");
 let entities = [];
 
 // DEFAULT CASE
-const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_LEFT);
-const LEFT_BOT = new Corner(new THREE.Vector3(-100, -100, -100), Location.BOT_LEFT);
-const RIGHT_TOP = new Corner(new THREE.Vector3(50, 100, -100), Location.TOP_RIGHT);
-const RIGHT_BOT = new Corner(new THREE.Vector3(50, -100, -100), Location.BOT_RIGHT);
+// const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_LEFT);
+// const LEFT_BOT = new Corner(new THREE.Vector3(-100, -100, -100), Location.BOT_LEFT);
+// const RIGHT_TOP = new Corner(new THREE.Vector3(50, 100, -100), Location.TOP_RIGHT);
+// const RIGHT_BOT = new Corner(new THREE.Vector3(50, -100, -100), Location.BOT_RIGHT);
 
+// LEFT SIDE CASE
 // const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, 100), Location.TOP_LEFT);
 // const LEFT_BOT = new Corner(new THREE.Vector3(-100, 30, 100), Location.BOT_LEFT);
 // const RIGHT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_RIGHT);
 // const RIGHT_BOT = new Corner(new THREE.Vector3(-100, 30, -100), Location.BOT_RIGHT);
+
+// 45 ROTATED
+// kinda works, a little weird because it doesn't follow the virtual face
+// - a possible solution could be calculating an x axis for each edge (top and bot)
+//   and calculate the average between the two, same for y axis
+const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_LEFT);
+const LEFT_BOT = new Corner(new THREE.Vector3(-100, -100, -100), Location.BOT_LEFT);
+const RIGHT_TOP = new Corner(new THREE.Vector3(100, 100, -200), Location.TOP_RIGHT);
+const RIGHT_BOT = new Corner(new THREE.Vector3(100, -100, -200), Location.BOT_RIGHT);
 
 async function init() {
     scene = new THREE.Scene();
@@ -50,7 +60,7 @@ async function init() {
 
     await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
     await arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
-    await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
+    const id = await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
 
     // add arena to the scene
     scene.add(arena.getArena());
@@ -68,7 +78,7 @@ async function init() {
 
     const btnProject = document.getElementById("project");
     btnProject.addEventListener('click', _ => {
-        arena.getArenaAxis(camera, renderer.domElement.width, renderer.domElement.height);
+        arena.moveRobotByOffset(id, new THREE.Vector3(10, -5, 0));
     });
 }
 

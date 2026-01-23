@@ -101,22 +101,34 @@ class Arena {
         if (!this.isAxisOk) this.#estimateArenaAxis();
 
         // robot position start from arena origin point
-        const robotPos = new THREE.Vector3().copy(this.origin);
+        const robotPos = this.#calcRelativePosition(position);
 
-        // calculate final position using the given relative position
-        const relx = new THREE.Vector3().copy(this.axis.x).multiplyScalar(position.x)
-        const rely = new THREE.Vector3().copy(this.axis.y).multiplyScalar(position.y)
-        robotPos.add(relx).add(rely);
-
-        const r = await createRobotMesh(robotPos);
-        if (r === undefined) {
+        const mesh = await createRobotMesh(robotPos);
+        if (mesh === undefined) {
             console.error("Cannot create robot");
             return;
         }
 
-        this.robots.push(new Robot(this.robotId, r));
+        const r = new Robot(this.robotId, mesh);
+        this.robotId++;
 
-        this.arena.add(r);
+        this.robots.push(r);
+
+        this.arena.add(mesh);
+
+        return r.id;
+    }
+
+    moveRobot(id, position) {
+        this.robots.filter(r => r.id === id)
+            .forEach(r => r.mesh.position.copy(this.#calcRelativePosition(position)));
+    }
+
+    moveRobotByOffset(id, offset) {
+        this.robots.filter(r => r.id === id)
+            .forEach(r => {
+                r.mesh.position.add(this.#calcRelativeOffset(offset));
+            });
     }
 
     #getCornerFromLocation(location) {
@@ -135,7 +147,6 @@ class Arena {
 
         this.arena.position.set(this.origin.x, this.origin.y, this.origin.z);
     }
-
 
     /**
      * Calculates the arena local axis to place robot inside.
@@ -169,6 +180,32 @@ class Arena {
 
         // https://en.wikipedia.org/wiki/Centroid#Of_a_finite_set_of_points
         return points.reduce((acc, val, _) => acc + val) / points.length;
+    }
+
+    #calcRelativePosition(position) {
+        // get arena origin point
+        if (!this.isOriginOk) this.#estimateArenaOrigin();
+
+        if (!this.isAxisOk) this.#estimateArenaAxis();
+
+        // robot position start from arena origin point
+        const robotPos = new THREE.Vector3().copy(this.origin);
+
+        // calculate final position using the given relative position
+        const relx = new THREE.Vector3().copy(this.axis.x).multiplyScalar(position.x)
+        const rely = new THREE.Vector3().copy(this.axis.y).multiplyScalar(position.y)
+
+        return robotPos.add(relx).add(rely);
+    }
+
+    #calcRelativeOffset(position) {
+        if (!this.isAxisOk) this.#estimateArenaAxis();
+
+        const offset = new THREE.Vector3();
+        const relx = new THREE.Vector3().copy(this.axis.x).multiplyScalar(position.x)
+        const rely = new THREE.Vector3().copy(this.axis.y).multiplyScalar(position.y)
+
+        return offset.add(relx).add(rely);
     }
 }
 
