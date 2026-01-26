@@ -1,10 +1,23 @@
 import * as THREE from 'three';
 
+import { ARButton } from 'three/addons/webxr/ARButton.js'
+
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+import { AR } from 'js-aruco2'
 
 import { Location, Corner, Arena } from './arena.js'
 
 import * as Utils from './sceneUtils'
+
+function log(message) {
+    fetch(`/log?${encodeURI(message)}`);
+}
+
+// aruco detector
+const detector = new AR.Detector({
+    dictionaryName: "ARUCO"
+});
 
 const FOV = 75;
 const NEAR = 0.1;
@@ -12,7 +25,15 @@ const FAR = 1000;
 
 let scene, camera, renderer, arena;
 
+// camera scene
+let imageScene, imageCamera;
+
 const canvas = document.getElementById("scene");
+
+const divUi = document.getElementById("ui");
+const image = document.getElementById("debug-img");
+
+const features = ["camera-access"];
 
 // DEFAULT CASE
 // const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_LEFT);
@@ -41,7 +62,18 @@ async function init() {
     camera.position.z = 5;
 
     renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
-    const controls = new OrbitControls(camera, renderer.domElement);
+    renderer.xr.enabled = true;
+
+    document.body.appendChild(ARButton.createButton(renderer, {
+        requiredFeatures: features
+    }));
+
+    // init camera scene
+    imageScene = new THREE.Scene();
+    imageCamera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
+    imageCamera.position.z = 5;
+
+    // const controls = new OrbitControls(camera, renderer.domElement);
 
     arena = new Arena([LEFT_TOP, LEFT_BOT, RIGHT_TOP, RIGHT_BOT]);
     arena.createCasters();
@@ -60,15 +92,54 @@ async function init() {
     const directionalLight = new THREE.DirectionalLight(0xffffff);
     directionalLight.position.set(10, 10, 20).normalize();
     scene.add(directionalLight);
+}
 
-    const btnProject = document.getElementById("project");
-    btnProject.addEventListener('click', _ => {
-        arena.moveRobotByOffset(id, new THREE.Vector3(10, -5, 0));
-    });
+function handleCamera() {
+    if (!renderer.xr.getSession()) return;
+
+    const frame = renderer.xr.getFrame();
+    const refSpace = renderer.xr.getReferenceSpace();
+    if (!frame || !refSpace)
+        return;
+
+    const viewPose = frame.getViewerPose(refSpace);
+    if (!viewPose)
+        return;
+
+    const view = viewPose.views.find(view => view.camera);
+    if (!view)
+        return;
+
+    const camText = renderer.xr.getCameraTexture(view.camera);
+    if (!camText)
+        return;
+
+    // draw the camera content in another scene as backgground
+    // maybe get camera content using navigator and video?
+    // but when the image is retrieved destroy video?
+    imageScene.background = camText;
+    imageScene.background.needsUpdate = true;
+    const imageData = Utils.snapshot(renderer, imageCamera, imageScene);
+
+    // // debug canvas to see the image
+    // var canvas = document.createElement('canvas');
+    // var ctx = canvas.getContext('2d');
+    // canvas.width = 300
+    // canvas.height = 400
+    // ctx.putImageData(imageData, 0, 0, 0, 0, 400, 400);
+    // image.src = canvas.toDataURL();
+
+    const markers = detector.detect(imageData);
+    log(markers.length);
+
 }
 
 function update(time) {
     time *= 0.001;  // convert time to seconds
+
+    if (renderer.info.render.frame % 100 == 0) {
+        handleCamera();
+    }
 }
 
 function render(time) {
