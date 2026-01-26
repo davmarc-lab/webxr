@@ -6,9 +6,12 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 import { AR } from 'js-aruco2'
 
-import { Location, Corner, Arena } from './arena.js'
+import { Marker } from './marker'
+
+import { Location, Corner, Arena } from './arena'
 
 import * as Utils from './sceneUtils'
+import { createCube } from './helper';
 
 function log(message) {
     fetch(`/log?${encodeURI(message)}`);
@@ -18,6 +21,10 @@ function log(message) {
 const detector = new AR.Detector({
     dictionaryName: "ARUCO"
 });
+const modelSize = 35;
+
+let calibrated = false;
+let tracked;
 
 const FOV = 75;
 const NEAR = 0.1;
@@ -29,11 +36,13 @@ let scene, camera, renderer, arena;
 let imageScene, imageCamera;
 
 const canvas = document.getElementById("scene");
-
 const divUi = document.getElementById("ui");
-const image = document.getElementById("debug-img");
+const pTrk = document.getElementById("tracked");
+const pCal = document.getElementById("calibrated");
+const btnCal = document.getElementById("calibrate");
 
-const features = ["camera-access"];
+// xr session features
+const reqFeats = ["camera-access"];
 
 // DEFAULT CASE
 // const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_LEFT);
@@ -65,7 +74,9 @@ async function init() {
     renderer.xr.enabled = true;
 
     document.body.appendChild(ARButton.createButton(renderer, {
-        requiredFeatures: features
+        requiredFeatures: reqFeats,
+        optionalFeatures: ["dom-overlay"],
+        domOverlay: { root: divUi }
     }));
 
     // init camera scene
@@ -75,15 +86,15 @@ async function init() {
 
     // const controls = new OrbitControls(camera, renderer.domElement);
 
-    arena = new Arena([LEFT_TOP, LEFT_BOT, RIGHT_TOP, RIGHT_BOT]);
-    arena.createCasters();
+    // arena = new Arena([LEFT_TOP, LEFT_BOT, RIGHT_TOP, RIGHT_BOT]);
+    // arena.createCasters();
 
-    await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
-    await arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
-    const id = await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
+    // await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
+    // await arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
+    // const id = await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
 
     // add arena to the scene
-    scene.add(arena.getArena());
+    // scene.add(arena.getArena());
 
     // adds lights due to robot model material
     const ambientLight = new THREE.AmbientLight(0xffffff);
@@ -92,9 +103,16 @@ async function init() {
     const directionalLight = new THREE.DirectionalLight(0xffffff);
     directionalLight.position.set(10, 10, 20).normalize();
     scene.add(directionalLight);
+
+    btnCal.addEventListener("click", _ => {
+        calibrated = false;
+        pCal.innerText = "Calibrated: false";
+        tracked = [];
+    });
 }
 
 function handleCamera() {
+    tracked = [];
     if (!renderer.xr.getSession()) return;
 
     const frame = renderer.xr.getFrame();
@@ -119,7 +137,7 @@ function handleCamera() {
     // but when the image is retrieved destroy video?
     imageScene.background = camText;
     imageScene.background.needsUpdate = true;
-    const imageData = Utils.snapshot(renderer, imageCamera, imageScene);
+    const imageData = Utils.snapshot(renderer, camera, imageScene);
 
     // // debug canvas to see the image
     // var canvas = document.createElement('canvas');
@@ -129,16 +147,46 @@ function handleCamera() {
     // ctx.putImageData(imageData, 0, 0, 0, 0, 400, 400);
     // image.src = canvas.toDataURL();
 
-    const markers = detector.detect(imageData);
-    log(markers.length);
+    const markers = detector.detect(imageData, imageData.width, imageData.height);
+    log("Markers: " + markers.length);
+    if (markers.length == 0) return;
 
+    if (markers.length == 4) {
+        calibrated = true;
+        pCal.innerText = "Calibrated: true";
+    } else {
+        pCal.innerText = "Calibrated: false";
+    }
+
+    // evaluating markers
+    const posit = new POS.Posit(modelSize, renderer.domElement.width);
+    markers.forEach(m => {
+        let corners = m.corners;
+
+        // if it's not precise use this lines it should help
+        // for (let i = 0; i < corners.length; ++i) {
+        //     let corner = corners[i];
+        //     corner.x = corner.x - (renderer.domElement.width / 2);
+        //     corner.y = (renderer.domElement.height / 2) - corner.y;
+        // }
+
+        const pose = posit.pose(corners);
+        tracked.push(new Marker(m.id, pose));
+    });
+    pTrk.innerText = "Tracked: " + tracked.length;
 }
 
 function update(time) {
     time *= 0.001;  // convert time to seconds
 
-    if (renderer.info.render.frame % 100 == 0) {
+    if (renderer.info.render.frame % 100 == 0 && !calibrated) {
         handleCamera();
+    }
+
+    if (calibrated) {
+        // create arena
+        const points = tracked.map(t => t.getBestPosition());
+        console.log(points);
     }
 }
 
