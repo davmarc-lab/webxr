@@ -21,7 +21,7 @@ function log(message) {
 const detector = new AR.Detector({
     dictionaryName: "ARUCO"
 });
-const modelSize = 35;
+const modelSize = 65;
 
 let tracked = [], calibrated = false;
 let arenaCreated = false;
@@ -49,8 +49,10 @@ async function init() {
     camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
     camera.position.z = 5;
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
+    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas, preserveDrawingBuffer: true });
     renderer.xr.enabled = true;
+
+    const controls = new OrbitControls(camera, renderer.domElement);
 
     document.body.appendChild(ARButton.createButton(renderer, {
         requiredFeatures: reqFeats,
@@ -101,11 +103,11 @@ function handleCamera() {
     const posit = new POS.Posit(modelSize, renderer.domElement.width);
     markers.forEach(m => {
         let corners = m.corners;
-        for (let i = 0; i < corners.length; ++i) {
-            let corner = corners[i];
-            corner.x = corner.x - (renderer.domElement.width / 2);
-            corner.y = (renderer.domElement.height / 2) - corner.y;
-        }
+        // for (let i = 0; i < corners.length; ++i) {
+        //     let corner = corners[i];
+        //     corner.x = corner.x - (renderer.domElement.width / 2);
+        //     corner.y = (renderer.domElement.height / 2) - corner.y;
+        // }
 
         const pose = posit.pose(corners);
         tracked.push(new Marker(m.id, pose));
@@ -123,7 +125,9 @@ function update(time) {
     if (calibrated && !arenaCreated) {
         // create arena
         const points = tracked.map(t => t.getBestPosition());
-        console.log(points);
+        const cubes = points.map(p => createCube(p, new THREE.Vector3(20, 20, 20)));
+
+        cubes.forEach(c => scene.add(c));
 
         arenaCreated = true;
     }

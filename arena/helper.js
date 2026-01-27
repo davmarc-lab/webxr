@@ -7,7 +7,7 @@ const ROBOT_SCALE = 0.1;
 const loader = new GLTFLoader();
 
 const cubeGeom = new THREE.BoxGeometry(1, 1, 1);
-const cubeMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+const cubeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
 /**
  * Creates a standard cube threejs mesh with the same material and geometry.
@@ -16,7 +16,7 @@ const cubeMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
  * @param {THREE.Vector3} scale Cube scale vector.
  * @returns {THREE.Mesh} The mesh of the cube generated.
  */
-function createCube(position, scale) {
+function createCube(position, scale, rotation) {
     const c = new THREE.Mesh(cubeGeom, cubeMat);
 
     if (position !== undefined)
@@ -24,6 +24,9 @@ function createCube(position, scale) {
 
     if (scale !== undefined)
         c.scale.set(scale.x, scale.y, scale.z);
+
+    if (rotation !== undefined)
+        c.rotation.set(rotation.x, rotation.y, rotation.z);
 
     return c;
 }

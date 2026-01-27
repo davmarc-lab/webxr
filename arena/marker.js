@@ -14,9 +14,18 @@ class Marker {
 
     getId() { return this.#id; }
 
-    getBestPosition() { return new THREE.Vector3(this.#pose.bestTranslation[0], this.#pose.bestTranslation[1], this.#pose.bestTranslation[2]); }
+    getBestPosition() { return new THREE.Vector3(this.#pose.bestTranslation[0], this.#pose.bestTranslation[1], -this.#pose.bestTranslation[2]); }
 
-    getAlternativePosition() { return new THREE.Vector3(this.#pose.alternativeTranslation[0], this.#pose.alternativeTranslation[1], this.#pose.alternativeTranslation[2]); }
+    getAlternativePosition() { return new THREE.Vector3(this.#pose.alternativeTranslation[0], this.#pose.alternativeTranslation[1], -this.#pose.alternativeTranslation[2]); }
+
+    getBestRotation() {
+        const r = this.#pose.bestRotation;
+        return new THREE.Vector3(
+            -Math.asin(-r[1][2]),
+            -Math.atan2(r[0][2], r[2][2]),
+            Math.atan2(r[1][0], r[1][1])
+        );
+    }
 }
 
 export {

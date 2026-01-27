@@ -2,6 +2,10 @@ import * as THREE from 'three';
 
 const maxPixelCount = 3840 * 2160;
 
+function log(message) {
+    fetch(`/log?${encodeURI(message)}`);
+}
+
 function resizeRenderer(renderer, camera) {
     const canvas = renderer.domElement;
     const pixelRatio = window.devicePixelRatio;
@@ -45,11 +49,15 @@ function snapshot(renderer, camera, scene) {
     const height = renderer.domElement.height;
     const rt = new THREE.WebGLRenderTarget(width, height);
 
+    const oldRt = renderer.getRenderTarget();
+
     renderer.setRenderTarget(rt);
     renderer.render(scene, camera);
 
     const buffer = new Uint8Array(width * height * 4);
     renderer.readRenderTargetPixels(rt, 0, 0, width, height, buffer);
+
+    renderer.setRenderTarget(oldRt);
 
     return flipImageVertically(new ImageData(
         new Uint8ClampedArray(buffer),
