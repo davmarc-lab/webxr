@@ -21,7 +21,7 @@ function log(message) {
 const detector = new AR.Detector({
     dictionaryName: "ARUCO"
 });
-const modelSize = 50;
+const modelSize = 10;
 
 let calibrated = false;
 let tracked;
@@ -44,6 +44,25 @@ const pTrk = document.getElementById("tracked");
 const pCal = document.getElementById("calibrated");
 const btnCal = document.getElementById("calibrate");
 
+const locations = [
+    {
+        id: 0,
+        loc: Location.TOP_LEFT
+    },
+    {
+        id: 1,
+        loc: Location.TOP_RIGHT
+    },
+    {
+        id: 2,
+        loc: Location.BOT_LEFT
+    },
+    {
+        id: 3,
+        loc: Location.BOT_RIGHT
+    },
+];
+
 // xr session features
 const reqFeats = ["unbounded", "camera-access"];
 
@@ -63,11 +82,10 @@ const reqFeats = ["unbounded", "camera-access"];
 // kinda works, a little weird because it doesn't follow the virtual face
 // - a possible solution could be calculating an x axis for each edge (top and bot)
 //   and calculate the average between the two, same for y axis
-const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_LEFT);
-const LEFT_BOT = new Corner(new THREE.Vector3(-100, -100, -100), Location.BOT_LEFT);
-const RIGHT_TOP = new Corner(new THREE.Vector3(100, 100, -200), Location.TOP_RIGHT);
-const RIGHT_BOT = new Corner(new THREE.Vector3(100, -100, -200), Location.BOT_RIGHT);
-
+// const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_LEFT);
+// const LEFT_BOT = new Corner(new THREE.Vector3(-100, -100, -100), Location.BOT_LEFT);
+// const RIGHT_TOP = new Corner(new THREE.Vector3(100, 100, -200), Location.TOP_RIGHT);
+// const RIGHT_BOT = new Corner(new THREE.Vector3(100, -100, -200), Location.BOT_RIGHT);
 
 async function init() {
     scene = new THREE.Scene();
@@ -87,16 +105,6 @@ async function init() {
     imageScene = new THREE.Scene();
 
     // const controls = new OrbitControls(camera, renderer.domElement);
-
-    // arena = new Arena([LEFT_TOP, LEFT_BOT, RIGHT_TOP, RIGHT_BOT]);
-    // arena.createCasters();
-
-    // await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
-    // await arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
-    // const id = await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
-
-    // add arena to the scene
-    // scene.add(arena.getArena());
 
     // adds lights due to robot model material
     const ambientLight = new THREE.AmbientLight(0xffffff);
@@ -170,7 +178,6 @@ function handleCamera() {
     markers.forEach(m => {
         let corners = m.corners;
 
-        // if it's not precise use this lines it should help
         for (let i = 0; i < corners.length; ++i) {
             let corner = corners[i];
             corner.x = corner.x - (renderer.domElement.width / 2);
@@ -192,6 +199,39 @@ function updateUi(cubes) {
     });
 }
 
+let flag = false;
+async function createArena(bestValues = true) {
+    flag = true;
+    log("CREATING")
+    // find right corners
+    const corners = [];
+
+    tracked.forEach(t => {
+        const loc = locations.find(l => l.id == t.getId()).loc;
+        if (!loc) return;
+
+        corners.push(new Corner(bestValues ? t.getBestPosition() : t.getAlternativePosition(),
+            bestValues ? t.getBestRotation() : t.getAlternativeRotation(),
+            loc));
+    })
+
+    arena = new Arena(corners);
+    arena.createCasters();
+
+    await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
+    // await arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
+    // const id = await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
+
+    scene.add(arena.getArena());
+
+    arenaCreated = corners.length == 4;
+    if (arenaCreated) {
+        const pos = arena.getArenaOrigin();
+        log(pos.x + " " + pos.y + " " + pos.z)
+    }
+    log("CREATED")
+}
+
 function update(time) {
     time *= 0.001;  // convert time to seconds
 
@@ -199,13 +239,9 @@ function update(time) {
         handleCamera();
     }
 
-    if (calibrated && !arenaCreated) {
+    if (!flag && calibrated && !arenaCreated) {
         // create arena
-        const cubes = tracked.map(p => createCube(p.getBestPosition(), new THREE.Vector3(modelSize, modelSize, modelSize)));
-
-        cubes.forEach(c => scene.add(c));
-        // updateUi(cubes);
-        arenaCreated = true;
+        createArena();
     }
 }
 

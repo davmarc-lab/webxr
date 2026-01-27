@@ -26,6 +26,15 @@ class Marker {
             Math.atan2(r[1][0], r[1][1])
         );
     }
+
+    getAlternativeRotation() {
+        const r = this.#pose.alternativeRotation;
+        return new THREE.Vector3(
+            -Math.asin(-r[1][2]),
+            -Math.atan2(r[0][2], r[2][2]),
+            Math.atan2(r[1][0], r[1][1])
+        );
+    }
 }
 
 export {

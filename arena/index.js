@@ -32,14 +32,30 @@ const FAR = 1000;
 
 let scene, camera, renderer, arena;
 
-// camera scene
-let imageCamera;
-
 const canvas = document.getElementById("scene");
 const divUi = document.getElementById("ui");
 const pTrk = document.getElementById("tracked");
 const pCal = document.getElementById("calibrated");
 const btnCal = document.getElementById("calibrate");
+
+const locations = [
+    {
+        id: 0,
+        loc: Location.TOP_LEFT
+    },
+    {
+        id: 1,
+        loc: Location.TOP_RIGHT
+    },
+    {
+        id: 2,
+        loc: Location.BOT_LEFT
+    },
+    {
+        id: 3,
+        loc: Location.BOT_RIGHT
+    },
+];
 
 // xr session features
 const reqFeats = [];
@@ -47,22 +63,11 @@ const reqFeats = [];
 async function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
     camera.position.z = 5;
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas, preserveDrawingBuffer: true });
-    renderer.xr.enabled = true;
-
     const controls = new OrbitControls(camera, renderer.domElement);
-
-    document.body.appendChild(ARButton.createButton(renderer, {
-        requiredFeatures: reqFeats,
-        optionalFeatures: ["dom-overlay"],
-        domOverlay: { root: divUi }
-    }));
-
-    // init camera scene
-    imageCamera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
-    imageCamera.position.z = 5;
 
     const img = await (new THREE.TextureLoader()).loadAsync("arena.png");
     scene.background = img;
@@ -79,7 +84,6 @@ async function init() {
         calibrated = false;
         pTrk.innerText = "Tracked: 0";
         pCal.innerText = "Calibrated: false";
-        tracked = [];
     });
 }
 
@@ -103,11 +107,11 @@ function handleCamera() {
     const posit = new POS.Posit(modelSize, renderer.domElement.width);
     markers.forEach(m => {
         let corners = m.corners;
-        // for (let i = 0; i < corners.length; ++i) {
-        //     let corner = corners[i];
-        //     corner.x = corner.x - (renderer.domElement.width / 2);
-        //     corner.y = (renderer.domElement.height / 2) - corner.y;
-        // }
+        for (let i = 0; i < corners.length; ++i) {
+            let corner = corners[i];
+            corner.x = corner.x - (renderer.domElement.width / 2);
+            corner.y = (renderer.domElement.height / 2) - corner.y;
+        }
 
         const pose = posit.pose(corners);
         tracked.push(new Marker(m.id, pose));
@@ -115,33 +119,47 @@ function handleCamera() {
     pTrk.innerText = "Tracked: " + tracked.length;
 }
 
-function update(time) {
-    time *= 0.001;  // convert time to seconds
+async function createArena(bestValues = true) {
+    const corners = [];
+    tracked.forEach(t => {
+        const loc = locations.find(l => l.id == t.getId()).loc;
+        if (!loc) return;
 
+        corners.push(new Corner(bestValues ? t.getBestPosition() : t.getAlternativePosition(),
+            bestValues ? t.getBestRotation() : t.getAlternativeRotation(),
+            loc));
+    })
+
+    arena = new Arena(corners);
+    arena.createCasters();
+
+    await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
+    await arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
+    await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
+
+    scene.add(arena.getArena());
+
+    arenaCreated = corners.length == 4;
+}
+
+function update() {
     if (renderer.info.render.frame % 100 == 0 && !calibrated) {
         handleCamera();
     }
 
     if (calibrated && !arenaCreated) {
         // create arena
-        const points = tracked.map(t => t.getBestPosition());
-        const cubes = points.map(p => createCube(p, new THREE.Vector3(20, 20, 20)));
-
-        cubes.forEach(c => scene.add(c));
-
-        arenaCreated = true;
+        createArena();
     }
 }
 
-function render(time) {
-    time *= 0.001;  // convert time to seconds
-
+function render() {
     renderer.render(scene, camera);
 }
 
 function loop(time) {
-    update(time);
-    render(time);
+    update();
+    render();
 }
 
 await init();

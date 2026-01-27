@@ -8,7 +8,7 @@ import { createCube, createRobotMesh, createAxis } from "./helper";
  * Corner caster scale vector.
  * @type {THREE.Vector3}
  */
-const CASTER_SCALE = new THREE.Vector3(50, 50, 50);
+const CASTER_SCALE = new THREE.Vector3(10, 10, 10);
 
 /**
  * Enum-like class representing valid corner locations.
@@ -47,17 +47,26 @@ class Corner {
     position;
 
     /**
+     * @type {THREE.Vector3}
+     */
+    rotation;
+
+    /**
      * @type {string}
      */
     location;
 
     /**
      * @param {THREE.Vector3} position Position of the corner in world space.
+     * @param {THREE.Vector3} rotation Rotation of the corner in world space.
      * @param {string} location Logical corner location (must be a value from {@link Location}).
      */
-    constructor(position, location) {
+    constructor(position, rotation, location) {
         if (!position.isVector3) throw new Error("The given position must be a `THREE.Vector3`");
         this.position = position;
+
+        if (!rotation.isVector3) throw new Error("The given rotation must be a `THREE.Vector3`");
+        this.rotation = rotation;
 
         if (!Location.isValid(location)) throw new Error("The given location is not valid (it must be of type `Location`)");
         this.location = location;
@@ -197,7 +206,7 @@ class Arena {
      * A caster is a mesh associated to one corner.
      */
     createCasters() {
-        this.corners.forEach(c => this.casters.push(createCube(c.position, CASTER_SCALE)));
+        this.corners.forEach(c => this.casters.push(createCube(c.position, CASTER_SCALE, c.rotation)));
         this.casters.forEach(c => this.arena.add(c));
         this.casters.forEach(e => e.add(createAxis()));
     }
