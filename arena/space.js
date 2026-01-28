@@ -21,7 +21,7 @@ function log(message) {
 const detector = new AR.Detector({
     dictionaryName: "ARUCO"
 });
-const modelSize = 10;
+const modelSize = 0.04;
 
 let calibrated = false;
 let tracked;
@@ -90,7 +90,7 @@ const reqFeats = ["unbounded", "camera-access"];
 async function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
-    camera.position.z = 5;
+    camera.position.z = 0;
 
     renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas, preserveDrawingBuffer: true });
     renderer.xr.enabled = true;
@@ -147,6 +147,7 @@ function handleCamera() {
     // draw the camera content in another scene as backgground
     // maybe get camera content using navigator and video?
     // but when the image is retrieved destroy video?
+
     imageScene.background = camText;
     imageScene.background.needsUpdate = true;
 
@@ -174,7 +175,8 @@ function handleCamera() {
     }
 
     // evaluating markers
-    const posit = new POS.Posit(modelSize, renderer.domElement.width);
+    log(imageData.width)
+    const posit = new POS.Posit(modelSize, imageData.width);
     markers.forEach(m => {
         let corners = m.corners;
 
@@ -218,7 +220,7 @@ async function createArena(bestValues = true) {
     arena = new Arena(corners);
     arena.createCasters();
 
-    await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
+    // await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
     // await arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
     // const id = await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
 

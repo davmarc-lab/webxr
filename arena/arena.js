@@ -8,7 +8,7 @@ import { createCube, createRobotMesh, createAxis } from "./helper";
  * Corner caster scale vector.
  * @type {THREE.Vector3}
  */
-const CASTER_SCALE = new THREE.Vector3(10, 10, 10);
+const CASTER_SCALE = new THREE.Vector3(0.04, 0.04, 0.04);
 
 /**
  * Enum-like class representing valid corner locations.

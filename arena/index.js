@@ -21,7 +21,7 @@ function log(message) {
 const detector = new AR.Detector({
     dictionaryName: "ARUCO"
 });
-const modelSize = 65;
+const modelSize = 1;
 
 let tracked = [], calibrated = false;
 let arenaCreated = false;
@@ -33,6 +33,7 @@ const FAR = 1000;
 let scene, camera, renderer, arena;
 
 const canvas = document.getElementById("scene");
+const video = document.getElementById("video");
 const divUi = document.getElementById("ui");
 const pTrk = document.getElementById("tracked");
 const pCal = document.getElementById("calibrated");
@@ -60,14 +61,41 @@ const locations = [
 // xr session features
 const reqFeats = [];
 
+function getVideoImage() {
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        .then(function (stream) {
+            if ("srcObject" in video) {
+                video.srcObject = stream;
+            } else {
+                video.src = window.URL.createObjectURL(stream);
+            }
+        });
+
+    const cs = document.createElement("canvas");
+    cs.width = video.width;
+    cs.height = video.height;
+
+    const ctx = cs.getContext("2d");
+    ctx.drawImage(video, 0, 0, video.width, video.height);
+    document.body.appendChild(cs)
+}
+
 async function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
 
+    video.width = window.innerWidth;
+    video.height = window.innerHeight;
+
+    const btn = document.getElementById("foo");
+    btn.addEventListener('click', _ => {
+        getVideoImage();
+    });
+
     renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
     camera.position.z = 5;
 
-    const controls = new OrbitControls(camera, renderer.domElement);
+    // const controls = new OrbitControls(camera, renderer.domElement);
 
     const img = await (new THREE.TextureLoader()).loadAsync("arena.png");
     scene.background = img;
@@ -114,6 +142,7 @@ function handleCamera() {
         }
 
         const pose = posit.pose(corners);
+        console.log(pose);
         tracked.push(new Marker(m.id, pose));
     });
     pTrk.innerText = "Tracked: " + tracked.length;
@@ -133,9 +162,9 @@ async function createArena(bestValues = true) {
     arena = new Arena(corners);
     arena.createCasters();
 
-    await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
-    await arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
-    await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
+    // await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
+    // await arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
+    // await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
 
     scene.add(arena.getArena());
 
