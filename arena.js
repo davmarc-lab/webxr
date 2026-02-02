@@ -8,7 +8,7 @@ import { createCube, createRobotMesh, createAxis } from "./helper";
  * Corner caster scale vector.
  * @type {THREE.Vector3}
  */
-const CASTER_SCALE = new THREE.Vector3(0.04, 0.04, 0.04);
+const CASTER_SCALE = new THREE.Vector3(50, 50, 50);
 
 /**
  * Enum-like class representing valid corner locations.
@@ -285,11 +285,14 @@ class Arena {
      *
      * @returns {Promise<number> | undefined} Resolves with the if of newly created Robot instance.
      */
-    async addRobot(position) {
+    async addRobot(id, position) {
         if (position === undefined) {
             console.error("[ERROR] Robot position cannot be empty");
             return undefined;
         }
+
+        // if the given robot is already created skip
+        if (this.hasRobot(id)) return;
 
         // recalculate arena origin point if needed
         if (!this.isOriginOk) this.#estimateArenaOrigin();
@@ -306,8 +309,7 @@ class Arena {
             return undefined;
         }
 
-        const robot = new Robot(this.robotId, mesh);
-        this.robotId++;
+        const robot = new Robot(id, mesh);
 
         // add the new robot to the tracked ones
         this.robots.push(robot);
@@ -316,6 +318,10 @@ class Arena {
         this.arena.add(mesh);
 
         return robot.id;
+    }
+
+    hasRobot(id) {
+        return this.robots.find(r => r.id == id) !== undefined;
     }
 
     /**

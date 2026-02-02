@@ -1,5 +1,9 @@
 import mqtt from "mqtt";
 
+function parseBrokerMessage(msg) {
+    return JSON.parse(msg.toString());
+}
+
 class MQTTBroker {
     #url;
     #options;
@@ -52,12 +56,13 @@ class MQTTBroker {
     }
 
     onMessage(topic, message) {
-        console.log(topic + ": " + message);
+        console.log(message.toString());
     }
 
     getUrl = () => { return this.#url; }
 }
 
 export {
-    MQTTBroker
+    MQTTBroker,
+    parseBrokerMessage
 }
