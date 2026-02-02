@@ -189,7 +189,7 @@ function handleCamera() {
 
     // evaluating markers
     log(imageData.width)
-    const posit = new POS.Posit(modelSize, imageData.width);
+    const posit = new POS.Posit(modelSize, renderer.domElement.width);
     markers.forEach(m => {
         let corners = m.corners;
 
@@ -201,11 +201,6 @@ function handleCamera() {
 
         const pose = posit.pose(corners);
         const t = new Marker(m.id, pose);
-        
-        const r = tracked.every(e => e.getId() == t.getId());
-        log(r);
-
-        const a = [];
 
         if (tracked.find(e => e.getId() == t.getId()) === undefined) {
             tracked.push(t);
@@ -229,7 +224,6 @@ function updateUi(cubes) {
 let flag = false;
 async function createArena(bestValues = true) {
     flag = true;
-    log("CREATING")
     // find right corners
     const corners = [];
 
@@ -256,7 +250,6 @@ async function createArena(bestValues = true) {
         const pos = arena.getArenaOrigin();
         log(pos.x + " " + pos.y + " " + pos.z)
     }
-    log("CREATED")
 }
 
 function update(time) {

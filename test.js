@@ -13,6 +13,24 @@ import { Location, Corner, Arena } from './arena'
 import * as Utils from './sceneUtils'
 import { createAxis, createCube } from './helper';
 
+import mqtt from "mqtt";
+
+import fs from 'fs';
+
+import { MQTTBroker } from './mqtt';
+
+const url = "ws://localhost:9001";
+const opts = {
+    clean: true,
+    connectTimeout: 4000
+}
+const publishers = [
+    "robots/+/position"
+]
+
+const broker = new MQTTBroker(url, opts);
+broker.connect(publishers);
+
 function log(message) {
     fetch(`/log?${encodeURI(message)}`);
 }
@@ -97,7 +115,7 @@ async function init() {
 
     // const controls = new OrbitControls(camera, renderer.domElement);
 
-    const img = await (new THREE.TextureLoader()).loadAsync("arena.png");
+    const img = await (new THREE.TextureLoader()).loadAsync("/assets/arena.png");
     scene.background = img;
 
     // adds lights due to robot model material
@@ -133,7 +151,6 @@ function handleCamera() {
 
     // evaluating markers
     const posit = new POS.Posit(modelSize, renderer.domElement.width);
-    console.log(renderer.domElement.width);
     markers.forEach(m => {
         let corners = m.corners;
         for (let i = 0; i < corners.length; ++i) {
@@ -143,7 +160,6 @@ function handleCamera() {
         }
 
         const pose = posit.pose(corners);
-        console.log(pose);
         tracked.push(new Marker(m.id, pose));
     });
     pTrk.innerText = "Tracked: " + tracked.length;
