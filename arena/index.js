@@ -21,20 +21,25 @@ function log(message) {
 const detector = new AR.Detector({
     dictionaryName: "ARUCO"
 });
-const modelSize = 1;
+const modelSize = 0.042;
 
-let tracked = [], calibrated = false;
-let arenaCreated = false;
+let calibrated = false;
+let tracked;
 
-const FOV = 75;
+const FOV = 45;
 const NEAR = 0.1;
 const FAR = 1000;
 
 let scene, camera, renderer, arena;
 
+// camera scene
+let imageScene;
+
+let arenaCreated = false;
+
 const canvas = document.getElementById("scene");
-const video = document.getElementById("video");
 const divUi = document.getElementById("ui");
+const divCorners = document.getElementById("corners");
 const pTrk = document.getElementById("tracked");
 const pCal = document.getElementById("calibrated");
 const btnCal = document.getElementById("calibrate");
@@ -59,46 +64,47 @@ const locations = [
 ];
 
 // xr session features
-const reqFeats = [];
+const reqFeats = ["unbounded", "camera-access"];
 
-function getVideoImage() {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-        .then(function (stream) {
-            if ("srcObject" in video) {
-                video.srcObject = stream;
-            } else {
-                video.src = window.URL.createObjectURL(stream);
-            }
-        });
+// DEFAULT CASE
+// const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_LEFT);
+// const LEFT_BOT = new Corner(new THREE.Vector3(-100, -100, -100), Location.BOT_LEFT);
+// const RIGHT_TOP = new Corner(new THREE.Vector3(50, 100, -100), Location.TOP_RIGHT);
+// const RIGHT_BOT = new Corner(new THREE.Vector3(50, -100, -100), Location.BOT_RIGHT);
 
-    const cs = document.createElement("canvas");
-    cs.width = video.width;
-    cs.height = video.height;
+// LEFT SIDE CASE
+// const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, 100), Location.TOP_LEFT);
+// const LEFT_BOT = new Corner(new THREE.Vector3(-100, 30, 100), Location.BOT_LEFT);
+// const RIGHT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_RIGHT);
+// const RIGHT_BOT = new Corner(new THREE.Vector3(-100, 30, -100), Location.BOT_RIGHT);
 
-    const ctx = cs.getContext("2d");
-    ctx.drawImage(video, 0, 0, video.width, video.height);
-    document.body.appendChild(cs)
-}
+// 45 ROTATED
+// kinda works, a little weird because it doesn't follow the virtual face
+// - a possible solution could be calculating an x axis for each edge (top and bot)
+//   and calculate the average between the two, same for y axis
+// const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_LEFT);
+// const LEFT_BOT = new Corner(new THREE.Vector3(-100, -100, -100), Location.BOT_LEFT);
+// const RIGHT_TOP = new Corner(new THREE.Vector3(100, 100, -200), Location.TOP_RIGHT);
+// const RIGHT_BOT = new Corner(new THREE.Vector3(100, -100, -200), Location.BOT_RIGHT);
 
 async function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
+    camera.position.z = 0;
 
-    video.width = window.innerWidth;
-    video.height = window.innerHeight;
+    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas, preserveDrawingBuffer: true });
+    renderer.xr.enabled = true;
 
-    const btn = document.getElementById("foo");
-    btn.addEventListener('click', _ => {
-        getVideoImage();
-    });
+    document.body.appendChild(ARButton.createButton(renderer, {
+        requiredFeatures: reqFeats,
+        optionalFeatures: ["dom-overlay"],
+        domOverlay: { root: divUi }
+    }));
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
-    camera.position.z = 5;
+    // init camera scene
+    imageScene = new THREE.Scene();
 
     // const controls = new OrbitControls(camera, renderer.domElement);
-
-    const img = await (new THREE.TextureLoader()).loadAsync("arena.png");
-    scene.background = img;
 
     // adds lights due to robot model material
     const ambientLight = new THREE.AmbientLight(0xffffff);
@@ -108,33 +114,85 @@ async function init() {
     directionalLight.position.set(10, 10, 20).normalize();
     scene.add(directionalLight);
 
+    // scene.add(createCube(new THREE.Vector3(0, 0, -286), new THREE.Vector3(modelSize, modelSize, modelSize)));
+
     btnCal.addEventListener("click", _ => {
         calibrated = false;
-        pTrk.innerText = "Tracked: 0";
         pCal.innerText = "Calibrated: false";
+        tracked = [];
     });
+}
+
+function debugImage(image) {
+    const c = document.createElement("canvas");
+    const ctx = c.getContext("2d");
+
+    c.width = image.width;
+    c.height = image.height;
+
+    ctx.putImageData(image, 0, 0);
+    document.body.appendChild(c);
 }
 
 function handleCamera() {
     tracked = [];
+    if (!renderer.xr.getSession()) return;
+
+    const frame = renderer.xr.getFrame();
+    const refSpace = renderer.xr.getReferenceSpace();
+    if (!frame || !refSpace)
+        return;
+
+    const viewPose = frame.getViewerPose(refSpace);
+    if (!viewPose)
+        return;
+
+    const view = viewPose.views.find(view => view.camera);
+    if (!view)
+        return;
+
+    const camText = renderer.xr.getCameraTexture(view.camera);
+    if (!camText)
+        return;
 
     // draw the camera content in another scene as backgground
     // maybe get camera content using navigator and video?
     // but when the image is retrieved destroy video?
-    const imageData = Utils.snapshot(renderer, camera, scene);
 
-    const markers = detector.detect(imageData, imageData.width, imageData.height);
+    imageScene.background = camText;
+    imageScene.background.needsUpdate = true;
+
+    const old = renderer.getRenderTarget();
+    const imageData = Utils.snapshot(renderer, camera, imageScene);
+    renderer.setRenderTarget(old);
+
+    // debugImage(imageData);
+
+    // // debug canvas to see the image
+    // var canvas = document.createElement('canvas');
+    // var ctx = canvas.getContext('2d');
+    // canvas.width = 300
+    // canvas.height = 400
+    // ctx.putImageData(imageData, 0, 0, 0, 0, 400, 400);
+    // image.src = canvas.toDataURL();
+
+    const markers = detector.detect(imageData);
+    log("Markers: " + markers.length);
     if (markers.length == 0) return;
 
     if (markers.length == 4) {
         calibrated = true;
         pCal.innerText = "Calibrated: true";
+    } else {
+        pCal.innerText = "Calibrated: false";
     }
 
     // evaluating markers
-    const posit = new POS.Posit(modelSize, renderer.domElement.width);
+    log(imageData.width)
+    const posit = new POS.Posit(modelSize, imageData.width);
     markers.forEach(m => {
         let corners = m.corners;
+
         for (let i = 0; i < corners.length; ++i) {
             let corner = corners[i];
             corner.x = corner.x - (renderer.domElement.width / 2);
@@ -142,14 +200,39 @@ function handleCamera() {
         }
 
         const pose = posit.pose(corners);
-        console.log(pose);
-        tracked.push(new Marker(m.id, pose));
+        const t = new Marker(m.id, pose);
+        
+        const r = tracked.every(e => e.getId() == t.getId());
+        log(r);
+
+        const a = [];
+
+        if (tracked.find(e => e.getId() == t.getId()) === undefined) {
+            tracked.push(t);
+
+            const pos = t.getBestPosition();
+            log("ID: " + t.getId() + " => " + pos.x + ", " + pos.y + ", " + pos.z);
+        }
     });
     pTrk.innerText = "Tracked: " + tracked.length;
 }
 
+function updateUi(cubes) {
+    cubes.forEach(c => {
+        const pos = c.position;
+        const p = document.createElement("p");
+        p.innerText = "x: " + pos.x + ", y: " + pos.y + ", z: " + pos.z;
+        divCorners.appendChild(p);
+    });
+}
+
+let flag = false;
 async function createArena(bestValues = true) {
+    flag = true;
+    log("CREATING")
+    // find right corners
     const corners = [];
+
     tracked.forEach(t => {
         const loc = locations.find(l => l.id == t.getId()).loc;
         if (!loc) return;
@@ -164,31 +247,40 @@ async function createArena(bestValues = true) {
 
     // await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
     // await arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
-    // await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
+    // const id = await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
 
     scene.add(arena.getArena());
 
     arenaCreated = corners.length == 4;
+    if (arenaCreated) {
+        const pos = arena.getArenaOrigin();
+        log(pos.x + " " + pos.y + " " + pos.z)
+    }
+    log("CREATED")
 }
 
-function update() {
+function update(time) {
+    time *= 0.001;  // convert time to seconds
+
     if (renderer.info.render.frame % 100 == 0 && !calibrated) {
         handleCamera();
     }
 
-    if (calibrated && !arenaCreated) {
+    if (!flag && calibrated && !arenaCreated) {
         // create arena
         createArena();
     }
 }
 
-function render() {
+function render(time) {
+    time *= 0.001;  // convert time to seconds
+
     renderer.render(scene, camera);
 }
 
 function loop(time) {
-    update();
-    render();
+    update(time);
+    render(time);
 }
 
 await init();
