@@ -93,14 +93,20 @@ class ArenaAxis {
     y;
 
     /**
+     * @type {THREE.Vector3}
+     */
+    z;
+
+    /**
      * Creates a new ArenaAxis instance.
      *
      * @param {THREE.Vector3} x Normalized vector representing the X axis.
      * @param {THREE.Vector3} y Normalized vector representing the Y axis.
      */
-    constructor(x, y) {
+    constructor(x, y, z) {
         this.x = x;
         this.y = y;
+        this.z = z;
     }
 }
 
@@ -336,6 +342,10 @@ class Arena {
             .forEach(r => r.mesh.position.copy(this.#calcRelativePosition(position)));
     }
 
+    orientRobot(orient) {
+
+    }
+
     /**
      * Moves the robot with the given id by the given offset, along arena axes,
      * relative to current position.
@@ -394,7 +404,7 @@ class Arena {
         const botLeft = this.#getCornerFromLocation(Location.BOT_LEFT);
         const yaxis = new THREE.Vector3().subVectors(topLeft.position, botLeft.position).normalize();
 
-        this.axes = new ArenaAxis(xaxis, yaxis);
+        this.axes = new ArenaAxis(xaxis, yaxis, new THREE.Vector3().crossVectors(xaxis, yaxis));
         this.isAxisOk = true;
     }
 

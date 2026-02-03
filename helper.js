@@ -2,6 +2,11 @@ import * as THREE from 'three';
 
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
+/**
+ * Robot scale.
+ * 
+ * { @type number }
+ */
 const ROBOT_SCALE = 0.1;
 
 const loader = new GLTFLoader();
@@ -31,18 +36,27 @@ function createCube(position, scale, rotation) {
     return c;
 }
 
+let cachedRobot = undefined;
+
 /**
- * Loads the robot gltf model and set custom scale.
+ * Loads only one time the robot model, then every time is called it gets cloned.
+ * The robot scale is standard.
  * 
  * @param {THREE.Vector3} position Robot position vector.
  * @returns {THREE.Group} The imported model scene.
  */
 async function createRobotMesh(position) {
-    const gltf = await loader.loadAsync('/assets/robot.gltf');
-    const robot = gltf.scene;
+    if (!cachedRobot) {
+        const gltf = await loader.loadAsync('/assets/robot.gltf');
+        cachedRobot = gltf.scene;
+    }
+
+    const robot = cachedRobot.clone();
 
     robot.scale.set(ROBOT_SCALE, ROBOT_SCALE, ROBOT_SCALE)
     robot.position.copy(position);
+    robot.rotation.x = Math.PI / 2;
+    robot.rotation.y = Math.PI / 2;
     return robot;
 }
 

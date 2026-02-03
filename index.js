@@ -114,8 +114,6 @@ async function init() {
     directionalLight.position.set(10, 10, 20).normalize();
     scene.add(directionalLight);
 
-    // scene.add(createCube(new THREE.Vector3(0, 0, -286), new THREE.Vector3(modelSize, modelSize, modelSize)));
-
     btnCal.addEventListener("click", _ => {
         calibrated = false;
         pCal.innerText = "Calibrated: false";

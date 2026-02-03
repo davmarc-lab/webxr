@@ -79,6 +79,11 @@ const LEFT_BOT = new Corner(new THREE.Vector3(-100, -100, -100), new THREE.Vecto
 const RIGHT_TOP = new Corner(new THREE.Vector3(100, 100, -100), new THREE.Vector3(0, 0, 0), Location.TOP_RIGHT);
 const RIGHT_BOT = new Corner(new THREE.Vector3(100, -100, -100), new THREE.Vector3(0, 0, 0), Location.BOT_RIGHT);
 
+// const LEFT_TOP = new Corner(new THREE.Vector3(100, 100, -100), new THREE.Vector3(0, 0, 0), Location.TOP_LEFT);
+// const LEFT_BOT = new Corner(new THREE.Vector3(100, 30, -100), new THREE.Vector3(0, 0, 0), Location.BOT_LEFT);
+// const RIGHT_TOP = new Corner(new THREE.Vector3(100, 100, 100), new THREE.Vector3(0, 0, 0), Location.TOP_RIGHT);
+// const RIGHT_BOT = new Corner(new THREE.Vector3(100, 30, 100), new THREE.Vector3(0, 0, 0), Location.BOT_RIGHT);
+
 // xr session features
 const reqFeats = [];
 
