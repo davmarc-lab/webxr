@@ -79,7 +79,6 @@ async function init() {
     arena.createCasters();
     scene.add(arena.getArena());
 
-
     broker.onMessage = async (topic, msg) => {
         // json parsed content of mqtt message
         const json = parseBrokerMessage(msg);
