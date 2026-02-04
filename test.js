@@ -96,7 +96,7 @@ async function init() {
         // robot position
         arena.moveRobot(rId, arenaPos)
 
-        // robot arena y-axes orientation
+        // robot arena y-axis orientation
         arena.orientRobot(rId, orient)
     };
 

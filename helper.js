@@ -36,6 +36,7 @@ function createCube(position, scale, rotation) {
     return c;
 }
 
+// early mesh loading
 const gltf = await loader.loadAsync('/assets/robot.gltf');
 const cachedRobot = gltf.scene;
 
@@ -47,13 +48,14 @@ const cachedRobot = gltf.scene;
  * @returns {THREE.Group} The imported model scene.
  */
 async function createRobotMesh(position) {
+    if (!cachedRobot) return;
+
+    // robot mesh cloned every time from `cachedRobot` to improve performance
     const robot = cachedRobot.clone();
     if (!robot) return undefined;
 
     robot.scale.set(ROBOT_SCALE, ROBOT_SCALE, ROBOT_SCALE)
     robot.position.copy(position);
-    // robot.rotation.x = Math.PI / 2;
-    // robot.rotation.y = Math.PI / 2;
     return robot;
 }
 

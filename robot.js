@@ -14,13 +14,19 @@ class Robot {
      */
     mesh;
 
+    /**
+     * Robot y-axis orientation angle in radians.
+     * 
+     * @type {number}
+     */
     orientation;
 
     /**
      * Creates a new Robot instance.
      *
      * @param {number} id Unique numeric identifier for the robot.
-     * @param {THREE.Group} mesh The robot's 3D mesh loaded via GLTFLoader.
+     * @param {THREE.Group} mesh The robot 3D mesh loaded via GLTFLoader.
+     * @param {number} orientation The robot y-axis angle in radians.
      */
     constructor(id, mesh, orientation) {
         this.id = id;

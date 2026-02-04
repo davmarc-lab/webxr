@@ -110,8 +110,23 @@ class ArenaAxis {
     }
 }
 
+/**
+ * Robot base vector in WSC.
+ * @type {THREE.Vector3}
+ */
 const ROBOT_BASE = new THREE.Vector3(0, -1, 0);
+
+/**
+ * Robot front vector in WSC.
+ * @type {THREE.Vector3}
+ */
 const ROBOT_FRONT = new THREE.Vector3(1, 0, 0);
+
+/**
+ * Robot right vector in WSC.
+ * @type {THREE.Vector3}
+ */
+const ROBOT_RIGHT = new THREE.Vector3(0, 0, 1);
 
 /**
  * Represents a 3D arena composed of four corners and containing robots.
@@ -313,18 +328,22 @@ class Arena {
             return undefined;
         }
 
-        // basis
-        const right = new THREE.Vector3().crossVectors(ROBOT_FRONT, ROBOT_BASE).negate();
-
-        const rb = new THREE.Matrix4().makeBasis(right, ROBOT_BASE, ROBOT_FRONT);
+        // Matrix basis
+        // robot basis matrix
+        const rb = new THREE.Matrix4().makeBasis(ROBOT_RIGHT, ROBOT_BASE, ROBOT_FRONT);
+        // plane basis matrix
         const tb = new THREE.Matrix4().makeBasis(this.axes.x, this.axes.z.clone().negate(), this.axes.y);
 
+        // mat * rb = tb => mat = tb / rb = tb * 1/rb = tb * inverse(rb)
         const mat = new THREE.Matrix4().multiplyMatrices(tb, rb.clone().invert());
         mesh.rotation.setFromRotationMatrix(mat);
 
-        mesh.rotateOnAxis(this.axes.y, orientation);
-
+        // saves the current orientation to calculate offset rotation
+        // (avoiding setRotationFromAxisAngle to keep the previous rotation)
         const robot = new Robot(id, mesh, orientation);
+
+        // adjust mesh orientation
+        mesh.rotateOnAxis(this.axes.y, orientation);
 
         // add the new robot to the tracked ones
         this.robots.push(robot);
@@ -335,6 +354,12 @@ class Arena {
         return robot.id;
     }
 
+    /**
+     * Checks if a robot with the given id already exists in the arena.
+     * 
+     * @param {number} id The robot id.
+     * @returns True if the robot exists.
+     */
     hasRobot(id) {
         return this.robots.find(r => r.id == id) !== undefined;
     }
@@ -351,6 +376,14 @@ class Arena {
             .forEach(r => r.mesh.position.copy(this.#calcRelativePosition(position)));
     }
 
+    /**
+     * Rotates the robot, if exists, with the given id along y-axis by a given value.
+     * This function calculates the offset from the previous orientation and
+     * rotates by an offset.
+     * 
+     * @param {number} id The robot id.
+     * @param {number} orient The angle to be rotated in radians.
+     */
     orientRobot(id, orient) {
         const robot = this.robots.find(r => r.id === id);
         if (robot) {
