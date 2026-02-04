@@ -14,15 +14,18 @@ class Robot {
      */
     mesh;
 
+    orientation;
+
     /**
      * Creates a new Robot instance.
      *
      * @param {number} id Unique numeric identifier for the robot.
      * @param {THREE.Group} mesh The robot's 3D mesh loaded via GLTFLoader.
      */
-    constructor(id, mesh) {
+    constructor(id, mesh, orientation) {
         this.id = id;
         this.mesh = mesh;
+        this.orientation = orientation;
     }
 
     /**

@@ -8,7 +8,7 @@ import { createCube, createRobotMesh, createAxis } from "./helper";
  * Corner caster scale vector.
  * @type {THREE.Vector3}
  */
-const CASTER_SCALE = new THREE.Vector3(50, 50, 50);
+const CASTER_SCALE = new THREE.Vector3(1, 1, 1);
 
 /**
  * Enum-like class representing valid corner locations.
@@ -109,6 +109,9 @@ class ArenaAxis {
         this.z = z;
     }
 }
+
+const ROBOT_BASE = new THREE.Vector3(0, -1, 0);
+const ROBOT_FRONT = new THREE.Vector3(1, 0, 0);
 
 /**
  * Represents a 3D arena composed of four corners and containing robots.
@@ -291,12 +294,7 @@ class Arena {
      *
      * @returns {Promise<number> | undefined} Resolves with the if of newly created Robot instance.
      */
-    async addRobot(id, position) {
-        if (position === undefined) {
-            console.error("[ERROR] Robot position cannot be empty");
-            return undefined;
-        }
-
+    async addRobot(id, position, orientation) {
         // if the given robot is already created skip
         if (this.hasRobot(id)) return;
 
@@ -307,15 +305,26 @@ class Arena {
         if (!this.isAxisOk) this.#estimateArenaAxis();
 
         // robot position start from arena origin point
+        if (!position) position = new THREE.Vector3();
         const robotPos = this.#calcRelativePosition(position);
-
         const mesh = await createRobotMesh(robotPos);
         if (mesh === undefined) {
             console.error("[ERROR] Cannot create robot mesh");
             return undefined;
         }
 
-        const robot = new Robot(id, mesh);
+        // basis
+        const right = new THREE.Vector3().crossVectors(ROBOT_FRONT, ROBOT_BASE).negate();
+
+        const rb = new THREE.Matrix4().makeBasis(right, ROBOT_BASE, ROBOT_FRONT);
+        const tb = new THREE.Matrix4().makeBasis(this.axes.x, this.axes.z.clone().negate(), this.axes.y);
+
+        const mat = new THREE.Matrix4().multiplyMatrices(tb, rb.clone().invert());
+        mesh.rotation.setFromRotationMatrix(mat);
+
+        mesh.rotateOnAxis(this.axes.y, orientation);
+
+        const robot = new Robot(id, mesh, orientation);
 
         // add the new robot to the tracked ones
         this.robots.push(robot);
@@ -342,8 +351,13 @@ class Arena {
             .forEach(r => r.mesh.position.copy(this.#calcRelativePosition(position)));
     }
 
-    orientRobot(orient) {
-
+    orientRobot(id, orient) {
+        const robot = this.robots.find(r => r.id === id);
+        if (robot) {
+            const offset = robot.orientation - orient;
+            robot.orientation = orient;
+            robot.mesh.rotateOnAxis(this.axes.y, offset);
+        }
     }
 
     /**
@@ -470,5 +484,6 @@ class Arena {
 export {
     Location,
     Corner,
-    Arena
+    Arena,
+    CASTER_SCALE
 }

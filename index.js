@@ -8,7 +8,7 @@ import { AR } from 'js-aruco2'
 
 import { Marker } from './marker'
 
-import { Location, Corner, Arena } from './arena'
+import { Location, Corner, Arena, CASTER_SCALE } from './arena'
 
 import * as Utils from './sceneUtils'
 import { createCube } from './helper';
@@ -235,6 +235,7 @@ async function createArena(bestValues = true) {
     })
 
     arena = new Arena(corners);
+    CASTER_SCALE.set(modelSize, modelSize, modelSize);
     arena.createCasters();
 
     // await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
