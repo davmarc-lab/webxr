@@ -7,7 +7,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
  * 
  * { @type number }
  */
-const ROBOT_SCALE = 0.1;
+const ROBOT_SCALE = 0.0001;
 
 const loader = new GLTFLoader();
 

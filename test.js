@@ -8,10 +8,13 @@ import * as Utils from './sceneUtils'
 
 import { MQTTBroker, parseBrokerMessage } from './mqtt';
 
-const url = "ws://localhost:9001";
+const url = "wss://frank:9001";
 const opts = {
+    protocol: "wss",
+    clientId: "ADF",
     clean: true,
-    connectTimeout: 4000
+    connectTimeout: 4000,
+    rejectUnauthorized: true
 }
 
 const publishers = [

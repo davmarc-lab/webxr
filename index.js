@@ -11,7 +11,8 @@ import { Marker } from './marker'
 import { Location, Corner, Arena, CASTER_SCALE } from './arena'
 
 import * as Utils from './sceneUtils'
-import { createCube } from './helper';
+
+import { MQTTBroker, parseBrokerMessage } from './mqtt';
 
 function log(message) {
     fetch(`/log?${encodeURI(message)}`);
@@ -66,26 +67,23 @@ const locations = [
 // xr session features
 const reqFeats = ["unbounded", "camera-access"];
 
-// DEFAULT CASE
-// const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_LEFT);
-// const LEFT_BOT = new Corner(new THREE.Vector3(-100, -100, -100), Location.BOT_LEFT);
-// const RIGHT_TOP = new Corner(new THREE.Vector3(50, 100, -100), Location.TOP_RIGHT);
-// const RIGHT_BOT = new Corner(new THREE.Vector3(50, -100, -100), Location.BOT_RIGHT);
+// mqtt
+const publishers = [
+    "robots/+/position"
+]
 
-// LEFT SIDE CASE
-// const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, 100), Location.TOP_LEFT);
-// const LEFT_BOT = new Corner(new THREE.Vector3(-100, 30, 100), Location.BOT_LEFT);
-// const RIGHT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_RIGHT);
-// const RIGHT_BOT = new Corner(new THREE.Vector3(-100, 30, -100), Location.BOT_RIGHT);
+const url = "wss://frank:9001";
+const opts = {
+    protocol: "wss",
+    clientId: "ADF",
+    clean: true,
+    connectTimeout: 4000,
+    rejectUnauthorized: true
+}
 
-// 45 ROTATED
-// kinda works, a little weird because it doesn't follow the virtual face
-// - a possible solution could be calculating an x axis for each edge (top and bot)
-//   and calculate the average between the two, same for y axis
-// const LEFT_TOP = new Corner(new THREE.Vector3(-100, 100, -100), Location.TOP_LEFT);
-// const LEFT_BOT = new Corner(new THREE.Vector3(-100, -100, -100), Location.BOT_LEFT);
-// const RIGHT_TOP = new Corner(new THREE.Vector3(100, 100, -200), Location.TOP_RIGHT);
-// const RIGHT_BOT = new Corner(new THREE.Vector3(100, -100, -200), Location.BOT_RIGHT);
+// create connection to the mqtt broker
+const broker = new MQTTBroker(url, opts);
+broker.connect(publishers);
 
 async function init() {
     scene = new THREE.Scene();
@@ -186,7 +184,6 @@ function handleCamera() {
     }
 
     // evaluating markers
-    log(imageData.width)
     const posit = new POS.Posit(modelSize, renderer.domElement.width);
     markers.forEach(m => {
         let corners = m.corners;
@@ -238,16 +235,30 @@ async function createArena(bestValues = true) {
     CASTER_SCALE.set(modelSize, modelSize, modelSize);
     arena.createCasters();
 
-    // await arena.addRobot(new THREE.Vector3(0, 0, 0), new THREE.Color(0xff0000));
-    // await arena.addRobot(new THREE.Vector3(1, 20, 2), new THREE.Color(0x00ff00));
-    // const id = await arena.addRobot(new THREE.Vector3(-22, -4, 3), new THREE.Color(0x0000ff));
-
     scene.add(arena.getArena());
 
     arenaCreated = corners.length == 4;
     if (arenaCreated) {
-        const pos = arena.getArenaOrigin();
-        log(pos.x + " " + pos.y + " " + pos.z)
+        log("Registering callback");
+        broker.onMessage = async (topic, msg) => {
+            // json parsed content of mqtt message
+            const json = parseBrokerMessage(msg);
+
+            const rId = json.robot_id;
+            const arenaPos = new THREE.Vector3(0, 0, 0);
+            const orient = json.orientation;
+
+            // is robot already in arena?
+            if (!arena.hasRobot(rId)) {
+                await arena.addRobot(rId, arenaPos, orient);
+            }
+
+            // robot position
+            arena.moveRobot(rId, arenaPos)
+
+            // robot arena y-axis orientation
+            arena.orientRobot(rId, orient)
+        };
     }
 }
 
@@ -261,6 +272,7 @@ function update(time) {
     if (!flag && calibrated && !arenaCreated) {
         // create arena
         createArena();
+
     }
 }
 

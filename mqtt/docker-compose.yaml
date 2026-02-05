@@ -1,0 +1,12 @@
+services:
+  mqtt:
+    image: eclipse-mosquitto:2.0.22
+    container_name: mqtt
+    ports:
+      - "1883:1883"   # mqtt
+      - "9001:9001"   # wss
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./certs:/mosquitto/certs
+    command: mosquitto -c /mosquitto/config/mosquitto.conf -v
+    restart: unless-stopped

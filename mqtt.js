@@ -1,5 +1,9 @@
 import mqtt from "mqtt";
 
+function log(message) {
+    fetch(`/log?${encodeURI(message)}`);
+}
+
 /**
  * Parse a json message received from mqtt.
  * 
