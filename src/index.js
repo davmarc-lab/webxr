@@ -72,7 +72,7 @@ const publishers = [
     "robots/+/position"
 ]
 
-const url = "wss://frank:9001";
+const url = "wss://ugo-linux:9001";
 const opts = {
     protocol: "wss",
     clientId: "ADF",
@@ -84,6 +84,8 @@ const opts = {
 // create connection to the mqtt broker
 const broker = new MQTTBroker(url, opts);
 broker.connect(publishers);
+
+const simWorldSize = 100;
 
 async function init() {
     scene = new THREE.Scene();
@@ -231,7 +233,7 @@ async function createArena(bestValues = true) {
             loc));
     })
 
-    arena = new Arena(corners);
+    arena = new Arena(corners, simWorldSize);
     CASTER_SCALE.set(modelSize, modelSize, modelSize);
     arena.createCasters();
 
@@ -245,16 +247,20 @@ async function createArena(bestValues = true) {
             const json = parseBrokerMessage(msg);
 
             const rId = json.robot_id;
-            const arenaPos = new THREE.Vector3(0, 0, 0);
+            // const arenaPos = new THREE.Vector3(json.x * (100 / simWorldSize), json.y / simWorldSize, 0);
+            const simPos = { x: json.x, y: json.y };
             const orient = json.orientation;
+
+            // convert simulated arena coords into arena coords
+            const normPos = Arena.normalizeSimulatedPos(arena, new THREE.Vector3(simPos.x, simPos.y, 0));
 
             // is robot already in arena?
             if (!arena.hasRobot(rId)) {
-                await arena.addRobot(rId, arenaPos, orient);
+                await arena.addRobot(rId, normPos, orient);
             }
 
             // robot position
-            arena.moveRobot(rId, arenaPos)
+            arena.moveRobot(rId, normPos)
 
             // robot arena y-axis orientation
             arena.orientRobot(rId, orient)

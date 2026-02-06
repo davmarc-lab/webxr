@@ -8,10 +8,9 @@ import * as Utils from './sceneUtils'
 
 import { MQTTBroker, parseBrokerMessage } from './mqtt';
 
-const url = "wss://frank:9001";
+const url = "wss://ugo-linux:9001";
 const opts = {
     protocol: "wss",
-    clientId: "ADF",
     clean: true,
     connectTimeout: 4000,
     rejectUnauthorized: true
@@ -71,6 +70,8 @@ const RIGHT_BOT = new Corner(new THREE.Vector3(100, -100, -100), new THREE.Vecto
 // xr session features
 const reqFeats = [];
 
+const simWorldSize = 100;
+
 async function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
@@ -78,7 +79,7 @@ async function init() {
     camera.position.z = -100;
 
     CASTER_SCALE.set(20, 20, 20);
-    arena = new Arena([LEFT_TOP, LEFT_BOT, RIGHT_TOP, RIGHT_BOT]);
+    arena = new Arena([LEFT_TOP, LEFT_BOT, RIGHT_TOP, RIGHT_BOT], simWorldSize);
     arena.createCasters();
     scene.add(arena.getArena());
 
@@ -87,16 +88,20 @@ async function init() {
         const json = parseBrokerMessage(msg);
 
         const rId = json.robot_id;
-        const arenaPos = new THREE.Vector3(json.x, json.y, 0);
+        // const arenaPos = new THREE.Vector3(json.x * (100 / simWorldSize), json.y / simWorldSize, 0);
+        const simPos = { x: json.x, y: json.y };
         const orient = json.orientation;
+
+        // convert simulated arena coords into arena coords
+        const normPos = Arena.normalizeSimulatedPos(arena, new THREE.Vector3(simPos.x, simPos.y, 0));
 
         // is robot already in arena?
         if (!arena.hasRobot(rId)) {
-            await arena.addRobot(rId, arenaPos, orient);
+            await arena.addRobot(rId, normPos, orient);
         }
 
         // robot position
-        arena.moveRobot(rId, arenaPos)
+        arena.moveRobot(rId, normPos)
 
         // robot arena y-axis orientation
         arena.orientRobot(rId, orient)

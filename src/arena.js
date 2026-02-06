@@ -146,6 +146,8 @@ class Arena {
      */
     corners;
 
+    simulatedSize;
+
     /** 
      * @type {Array<THREE.Object3D>}
      */
@@ -191,13 +193,6 @@ class Arena {
     robots;
 
     /**
-     * Indicates the current id which the arena will give to a new robot.
-     * 
-     * @type {number}
-     */
-    robotId;
-
-    /**
      * Creates a new Arena instance.
      *
      * @param {Array<Corner>} corners Array of exactly four {@link Corner} instances
@@ -206,11 +201,14 @@ class Arena {
      * @throws {Error} If corners are missing.
      * @throws {Error} If corners array does not contain exactly four elements.
      */
-    constructor(corners) {
+    constructor(corners, simulatedSize) {
         if (corners === undefined) throw new Error("Missing arena corners");
         if (corners.length != 4) throw new Error("Corners must be of size 4 -> given `" + corners.length + "`");
 
         this.corners = corners;
+        this.simulatedSize = simulatedSize;
+        this.arenaSizes = new THREE.Vector3();
+        this.isSizesOk = false;
         this.casters = [];
 
         this.arena = new THREE.Object3D();
@@ -223,6 +221,9 @@ class Arena {
 
         this.robots = [];
         this.robotId = 0;
+
+        // calculates the arena x and y size
+        this.#calcArenaSizes();
     }
 
     /**
@@ -406,6 +407,13 @@ class Arena {
             .forEach(r => r.mesh.position.add(this.#calcRelativeOffset(offset)));
     }
 
+    static normalizeSimulatedPos(arena, position) {
+        const xfactor = arena.arenaSizes.x / arena.simulatedSize;
+        const yfactor = arena.arenaSizes.y / arena.simulatedSize;
+
+        return new THREE.Vector3(position.x * xfactor, position.y * yfactor, position.z);
+    }
+
     /**
      * Retrieves the corner placed at the given location.
      * 
@@ -511,6 +519,21 @@ class Arena {
         const rely = new THREE.Vector3().copy(this.axes.y).multiplyScalar(offset.y)
 
         return relOffset.add(relx).add(rely);
+    }
+
+    #calcArenaSizes() {
+        if (this.isSizesOk) return;
+
+        const left = this.corners.find(c => c.location == Location.TOP_LEFT).position;
+        const bot = this.corners.find(c => c.location == Location.BOT_LEFT).position;
+        const right = this.corners.find(c => c.location == Location.TOP_RIGHT).position;
+
+        // calculates the total length of the arena and divide by 2 because the center is in the middle
+        const xdist = left.distanceTo(right) / 2;
+        const ydist = left.distanceTo(bot) / 2;
+
+        this.arenaSizes = new THREE.Vector2(xdist, ydist);
+        this.isSizesOk = true;
     }
 }
 
