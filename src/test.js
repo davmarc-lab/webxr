@@ -8,7 +8,7 @@ import * as Utils from './sceneUtils'
 
 import { MQTTBroker, parseBrokerMessage } from './mqtt';
 
-const url = "wss://ugo-linux:9001";
+const url = "wss://frank:9001";
 const opts = {
     protocol: "wss",
     clean: true,

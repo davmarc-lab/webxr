@@ -65,14 +65,14 @@ const locations = [
 ];
 
 // xr session features
-const reqFeats = ["unbounded", "camera-access"];
+const reqFeats = ["viewer", "camera-access"];
 
 // mqtt
 const publishers = [
     "robots/+/position"
 ]
 
-const url = "wss://ugo-linux:9001";
+const url = "wss://frank:9001";
 const opts = {
     protocol: "wss",
     clientId: "ADF",
@@ -132,31 +132,30 @@ function debugImage(image) {
     document.body.appendChild(c);
 }
 
-function handleCamera() {
-    tracked = [];
-    if (!renderer.xr.getSession()) return;
+function getCameraImage() {
+    log("CAMERA IMAGE");
+    if (!renderer.xr.getSession()) return undefined;
 
     const frame = renderer.xr.getFrame();
     const refSpace = renderer.xr.getReferenceSpace();
     if (!frame || !refSpace)
-        return;
+        return undefined;
 
     const viewPose = frame.getViewerPose(refSpace);
     if (!viewPose)
-        return;
+        return undefined;
 
     const view = viewPose.views.find(view => view.camera);
     if (!view)
-        return;
+        return undefined;
 
     const camText = renderer.xr.getCameraTexture(view.camera);
     if (!camText)
-        return;
+        return undefined;
 
     // draw the camera content in another scene as backgground
     // maybe get camera content using navigator and video?
     // but when the image is retrieved destroy video?
-
     imageScene.background = camText;
     imageScene.background.needsUpdate = true;
 
@@ -174,17 +173,19 @@ function handleCamera() {
     // ctx.putImageData(imageData, 0, 0, 0, 0, 400, 400);
     // image.src = canvas.toDataURL();
 
-    const markers = detector.detect(imageData);
+    return imageData;
+}
+
+function detectMarkers(imageData) {
+    log("DETECT");
+    return detector.detect(imageData);
+}
+
+function trackMarkers(markers) {
     log("Markers: " + markers.length);
     if (markers.length == 0) return;
 
-    if (markers.length == 4) {
-        calibrated = true;
-        pCal.innerText = "Calibrated: true";
-    } else {
-        pCal.innerText = "Calibrated: false";
-    }
-
+    tracked = [];
     // evaluating markers
     const posit = new POS.Posit(modelSize, renderer.domElement.width);
     markers.forEach(m => {
@@ -206,6 +207,13 @@ function handleCamera() {
             log("ID: " + t.getId() + " => " + pos.x + ", " + pos.y + ", " + pos.z);
         }
     });
+
+    if (tracked.length == 4) {
+        calibrated = true;
+        pCal.innerText = "Calibrated: true";
+    } else {
+        pCal.innerText = "Calibrated: false";
+    }
     pTrk.innerText = "Tracked: " + tracked.length;
 }
 
@@ -272,13 +280,18 @@ function update(time) {
     time *= 0.001;  // convert time to seconds
 
     if (renderer.info.render.frame % 100 == 0 && !calibrated) {
-        handleCamera();
+        const image = getCameraImage();
+        if (!image) {
+            log("undefined");
+            return;
+        }
+        const markers = detectMarkers(image);
+        trackMarkers(markers);
     }
 
     if (!flag && calibrated && !arenaCreated) {
         // create arena
         createArena();
-
     }
 }
 

@@ -164,28 +164,28 @@ class Arena {
      * 
      * @type {THREE.Vector3}
      */
-    origin;
+    #origin;
 
     /**
      * Indicates whether the arena origin needs to be recalculated.
      * 
      * @type {boolean}
      */
-    isOriginOk;
+    #isOriginOk;
 
     /**
      * Axes for the arena coordinate system.
      * 
      * @type {ArenaAxis}
      */
-    axes;
+    #axes;
 
     /**
      * Indicates whether the arena axes needs to be recalculated.
      * 
      * @type {boolean}
      */
-    isAxisOk;
+    #isAxesOk;
 
     /** 
      * @type {Array<Robot>}
@@ -213,11 +213,11 @@ class Arena {
 
         this.arena = new THREE.Object3D();
 
-        this.origin = new THREE.Vector3(0, 0, 0);
-        this.isOriginOk = false;
+        this.#origin = new THREE.Vector3(0, 0, 0);
+        this.#isOriginOk = false;
 
-        this.axes = {};
-        this.isAxisOk = false;
+        this.#axes = {};
+        this.#isAxesOk = false;
 
         this.robots = [];
         this.robotId = 0;
@@ -272,9 +272,9 @@ class Arena {
      * @returns {THREE.Vector3} The arena origin point in WCS (World Coordinate System).
      */
     getArenaOrigin() {
-        if (!this.isOriginOk) this.#estimateArenaOrigin();
+        if (!this.#isOriginOk) this.#estimateArenaOrigin();
 
-        return this.origin;
+        return this.#origin;
     }
 
     /**
@@ -297,10 +297,10 @@ class Arena {
      * @returns {ArenaAxis} The arena relative axes.
      */
     getArenaAxis() {
-        if (this.isAxisOk) return this.axes;
+        if (this.#isAxesOk) return this.#axes;
 
-        this.#estimateArenaAxis();
-        return this.axes;
+        this.#estimateArenaAxes();
+        return this.#axes;
     }
 
     /**
@@ -315,10 +315,10 @@ class Arena {
         if (this.hasRobot(id)) return;
 
         // recalculate arena origin point if needed
-        if (!this.isOriginOk) this.#estimateArenaOrigin();
+        if (!this.#isOriginOk) this.#estimateArenaOrigin();
 
         // recalculate arena axes if needed
-        if (!this.isAxisOk) this.#estimateArenaAxis();
+        if (!this.#isAxesOk) this.#estimateArenaAxes();
 
         // robot position start from arena origin point
         if (!position) position = new THREE.Vector3();
@@ -333,7 +333,7 @@ class Arena {
         // robot basis matrix
         const rb = new THREE.Matrix4().makeBasis(ROBOT_RIGHT, ROBOT_BASE, ROBOT_FRONT);
         // plane basis matrix
-        const tb = new THREE.Matrix4().makeBasis(this.axes.x, this.axes.z.clone().negate(), this.axes.y);
+        const tb = new THREE.Matrix4().makeBasis(this.#axes.x, this.#axes.z.clone().negate(), this.#axes.y);
 
         // mat * rb = tb => mat = tb / rb = tb * 1/rb = tb * inverse(rb)
         const mat = new THREE.Matrix4().multiplyMatrices(tb, rb.clone().invert());
@@ -344,15 +344,13 @@ class Arena {
         const robot = new Robot(id, mesh, orientation);
 
         // adjust mesh orientation
-        mesh.rotateOnAxis(this.axes.y, orientation);
+        mesh.rotateOnAxis(this.#axes.y, orientation);
 
         // add the new robot to the tracked ones
         this.robots.push(robot);
 
         // add the new robot mesh to the arena
         this.arena.add(mesh);
-
-        return robot.id;
     }
 
     /**
@@ -390,7 +388,7 @@ class Arena {
         if (robot) {
             const offset = robot.orientation - orient;
             robot.orientation = orient;
-            robot.mesh.rotateOnAxis(this.axes.y, offset);
+            robot.mesh.rotateOnAxis(this.#axes.y, offset);
         }
     }
 
@@ -437,10 +435,10 @@ class Arena {
         const y = this.#calculateCentroid(this.corners.map(p => p.position.y));
         const z = this.#calculateCentroid(this.corners.map(p => p.position.z));
 
-        this.origin = new THREE.Vector3(x, y, z);
-        this.isOriginOk = true;
+        this.#origin = new THREE.Vector3(x, y, z);
+        this.#isOriginOk = true;
 
-        this.arena.position.set(this.origin.x, this.origin.y, this.origin.z);
+        this.arena.position.set(this.#origin.x, this.#origin.y, this.#origin.z);
     }
 
     /**
@@ -451,7 +449,7 @@ class Arena {
      * This is not generic, in fact it needs to know every corner relative location
      * (for example which one is the top left corner, which one is the top right corner and so on)
      */
-    #estimateArenaAxis() {
+    #estimateArenaAxes() {
         const topLeft = this.#getCornerFromLocation(Location.TOP_LEFT);
         const topRight = this.#getCornerFromLocation(Location.TOP_RIGHT);
         const xaxis = new THREE.Vector3().subVectors(topRight.position, topLeft.position).normalize();
@@ -459,8 +457,8 @@ class Arena {
         const botLeft = this.#getCornerFromLocation(Location.BOT_LEFT);
         const yaxis = new THREE.Vector3().subVectors(topLeft.position, botLeft.position).normalize();
 
-        this.axes = new ArenaAxis(xaxis, yaxis, new THREE.Vector3().crossVectors(xaxis, yaxis));
-        this.isAxisOk = true;
+        this.#axes = new ArenaAxis(xaxis, yaxis, new THREE.Vector3().crossVectors(xaxis, yaxis));
+        this.#isAxesOk = true;
     }
 
     /**
@@ -489,17 +487,17 @@ class Arena {
      */
     #calcRelativePosition(point) {
         // calculates arena origin if needed
-        if (!this.isOriginOk) this.#estimateArenaOrigin();
+        if (!this.#isOriginOk) this.#estimateArenaOrigin();
 
         // calculates arena axes if needed
-        if (!this.isAxisOk) this.#estimateArenaAxis();
+        if (!this.#isAxesOk) this.#estimateArenaAxes();
 
         // robot position start from arena origin point
-        const robotPos = new THREE.Vector3().copy(this.origin);
+        const robotPos = new THREE.Vector3().copy(this.#origin);
 
         // calculate final position using the given relative position
-        const relx = new THREE.Vector3().copy(this.axes.x).multiplyScalar(point.x)
-        const rely = new THREE.Vector3().copy(this.axes.y).multiplyScalar(point.y)
+        const relx = new THREE.Vector3().copy(this.#axes.x).multiplyScalar(point.x)
+        const rely = new THREE.Vector3().copy(this.#axes.y).multiplyScalar(point.y)
 
         return robotPos.add(relx).add(rely);
     }
@@ -512,11 +510,11 @@ class Arena {
      */
     #calcRelativeOffset(offset) {
         // calculates arena axes if needed
-        if (!this.isAxisOk) this.#estimateArenaAxis();
+        if (!this.#isAxesOk) this.#estimateArenaAxes();
 
         const relOffset = new THREE.Vector3();
-        const relx = new THREE.Vector3().copy(this.axes.x).multiplyScalar(offset.x)
-        const rely = new THREE.Vector3().copy(this.axes.y).multiplyScalar(offset.y)
+        const relx = new THREE.Vector3().copy(this.#axes.x).multiplyScalar(offset.x)
+        const rely = new THREE.Vector3().copy(this.#axes.y).multiplyScalar(offset.y)
 
         return relOffset.add(relx).add(rely);
     }
