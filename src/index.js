@@ -266,7 +266,7 @@ function update(time) {
 
     if (renderer.info.render.frame % 100 == 0 && !calibrated) {
         const image = getCameraImage();
-        if (!image) return undefined;
+        if (!image) return;
         const markers = detectMarkers(image);
         trackMarkers(markers);
     }
