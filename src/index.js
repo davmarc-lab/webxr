@@ -104,8 +104,6 @@ async function init() {
     // init camera scene
     imageScene = new THREE.Scene();
 
-    // const controls = new OrbitControls(camera, renderer.domElement);
-
     // adds lights due to robot model material
     const ambientLight = new THREE.AmbientLight(0xffffff);
     scene.add(ambientLight);
@@ -133,7 +131,6 @@ function debugImage(image) {
 }
 
 function getCameraImage() {
-    log("CAMERA IMAGE");
     if (!renderer.xr.getSession()) return undefined;
 
     const frame = renderer.xr.getFrame();
@@ -154,8 +151,6 @@ function getCameraImage() {
         return undefined;
 
     // draw the camera content in another scene as backgground
-    // maybe get camera content using navigator and video?
-    // but when the image is retrieved destroy video?
     imageScene.background = camText;
     imageScene.background.needsUpdate = true;
 
@@ -164,20 +159,10 @@ function getCameraImage() {
     renderer.setRenderTarget(old);
 
     // debugImage(imageData);
-
-    // // debug canvas to see the image
-    // var canvas = document.createElement('canvas');
-    // var ctx = canvas.getContext('2d');
-    // canvas.width = 300
-    // canvas.height = 400
-    // ctx.putImageData(imageData, 0, 0, 0, 0, 400, 400);
-    // image.src = canvas.toDataURL();
-
     return imageData;
 }
 
 function detectMarkers(imageData) {
-    log("DETECT");
     return detector.detect(imageData);
 }
 
