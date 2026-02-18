@@ -22,9 +22,12 @@ function log(message) {
 const detector = new AR.Detector({
     dictionaryName: "ARUCO"
 });
-const modelSize = 0.042;
+const modelSize = 0.1;
 
 let calibrated = false;
+/**
+ * @type {Array<Corner>}
+ */
 let tracked;
 
 const FOV = 45;
@@ -68,14 +71,13 @@ const locations = [
 const reqFeats = ["viewer", "camera-access"];
 
 // mqtt
-const publishers = [
+const topics = [
     "robots/+/position"
 ]
 
-const url = "wss://frank:9001";
+const url = "wss://ugo-linux:9001";
 const opts = {
     protocol: "wss",
-    clientId: "ADF",
     clean: true,
     connectTimeout: 4000,
     rejectUnauthorized: true
@@ -83,7 +85,7 @@ const opts = {
 
 // create connection to the mqtt broker
 const broker = new MQTTBroker(url, opts);
-broker.connect(publishers);
+broker.connect(topics);
 
 const simWorldSize = 100;
 
@@ -221,9 +223,11 @@ async function createArena(bestValues = true) {
         const loc = locations.find(l => l.id == t.getId()).loc;
         if (!loc) return;
 
-        corners.push(new Corner(bestValues ? t.getBestPosition() : t.getAlternativePosition(),
-            bestValues ? t.getBestRotation() : t.getAlternativeRotation(),
-            loc));
+        const pos = bestValues ? t.getBestPosition() : t.getAlternativePosition()
+        pos.applyMatrix4(camera.matrixWorld);
+        const rot = bestValues ? t.getBestRotation() : t.getAlternativeRotation()
+
+        corners.push(new Corner(pos, rot, loc));
     })
 
     arena = new Arena(corners, simWorldSize);

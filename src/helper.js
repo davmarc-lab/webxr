@@ -37,7 +37,7 @@ function createCube(position, scale, rotation) {
 }
 
 // early mesh loading
-const gltf = await loader.loadAsync('/assets/robot.gltf');
+const gltf = await loader.loadAsync('/assets/base.glb');
 const cachedRobot = gltf.scene;
 
 /**

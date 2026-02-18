@@ -190,7 +190,7 @@ class Arena {
     /** 
      * @type {Array<Robot>}
      */
-    robots;
+    #robots;
 
     /**
      * Creates a new Arena instance.
@@ -219,7 +219,7 @@ class Arena {
         this.#axes = {};
         this.#isAxesOk = false;
 
-        this.robots = [];
+        this.#robots = [];
         this.robotId = 0;
 
         // calculates the arena x and y size
@@ -282,7 +282,7 @@ class Arena {
      * 
      * @returns {Array<Robot>} The array containing all the robots.
      */
-    getRobots() { return this.robots; }
+    getRobots() { return this.#robots; }
 
     /**
      * Calculates the arena local axis to place robot inside.
@@ -347,7 +347,7 @@ class Arena {
         mesh.rotateOnAxis(this.#axes.y, orientation);
 
         // add the new robot to the tracked ones
-        this.robots.push(robot);
+        this.#robots.push(robot);
 
         // add the new robot mesh to the arena
         this.arena.add(mesh);
@@ -360,7 +360,7 @@ class Arena {
      * @returns True if the robot exists.
      */
     hasRobot(id) {
-        return this.robots.find(r => r.id == id) !== undefined;
+        return this.#robots.find(r => r.id == id) !== undefined;
     }
 
     /**
@@ -370,9 +370,12 @@ class Arena {
      * @param {THREE.Vector3} position The robot relative position.
      */
     moveRobot(id, position) {
-        // using forEach to avoid getting the first (array[0])
-        this.robots.filter(r => r.id === id)
-            .forEach(r => r.mesh.position.copy(this.#calcRelativePosition(position)));
+        // find the given robot
+        const robot = this.#robots.find(r => r.id === id);
+        if (robot) {
+            // update robot position if it exists
+            robot.mesh.position.copy(this.#calcRelativePosition(position));
+        }
     }
 
     /**
@@ -384,7 +387,11 @@ class Arena {
      * @param {number} orient The angle to be rotated in radians.
      */
     orientRobot(id, orient) {
-        const robot = this.robots.find(r => r.id === id);
+        // calculates arena axes if needed
+        if (!this.#isAxesOk) this.#estimateArenaAxes();
+
+        const robot = this.#robots.find(r => r.id === id);
+
         if (robot) {
             const offset = robot.orientation - orient;
             robot.orientation = orient;
@@ -401,7 +408,7 @@ class Arena {
      */
     moveRobotByOffset(id, offset) {
         // using forEach to avoid getting the first (array[0])
-        this.robots.filter(r => r.id === id)
+        this.#robots.filter(r => r.id === id)
             .forEach(r => r.mesh.position.add(this.#calcRelativeOffset(offset)));
     }
 

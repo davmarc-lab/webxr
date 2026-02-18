@@ -39,50 +39,50 @@ class MQTTBroker {
 
     /**
      * Connects the client to the mqtt broker.
-     * If any publisher is specified, it subscribes to each of them.
+     * If any topic is specified, it subscribes to each of them.
      * It also define a default onMessage callback function that prints the message received.
      * 
-     * @param {Array<string>} publishers List of publishers to subscribe.
+     * @param {Array<string>} topics List of topics to subscribe.
      */
-    connect(publishers) {
+    connect(topics) {
         this.#client = mqtt.connect(this.#url, this.#options);
         this.#client.on('connect', _ => {
             console.log("Connected to " + this.#url);
 
             // subscribes to the given publishers
-            this.subscribe(publishers);
+            this.subscribe(topics);
         });
 
         this.#client.on('message', (topic, message) => this.onMessage(topic, message));
     }
 
     /**
-     * Subscribes the client to the given publishers.
+     * Subscribes the client to the given topics.
      * 
-     * @param {string | Array<string>} publishers It could be a single publisher or an array.
-     * @returns `undefined` if the publishers are not specified.
+     * @param {string | Array<string>} topics It could be a single topic or an array.
+     * @returns `undefined` if at least one topic is not specified.
      */
-    subscribe(publishers) {
-        if (publishers === undefined) return;
+    subscribe(topics) {
+        if (topics === undefined) return;
 
-        if (publishers instanceof Array) {
-            publishers.forEach(p => {
+        if (topics instanceof Array) {
+            topics.forEach(t => {
 
-                this.#client.subscribe(p, (err) => {
+                this.#client.subscribe(t, (err) => {
                     if (err) {
                         console.error(err);
                         return;
                     }
-                    console.log("Subscribed to " + p);
+                    console.log("Subscribed to " + t);
                 });
             });
         } else {
-            this.#client.subscribe(publishers, err => {
+            this.#client.subscribe(topics, err => {
                 if (err) {
                     console.error(err);
                     return;
                 }
-                console.log("Subscribed to " + publishers);
+                console.log("Subscribed to " + topics);
             });
         }
     }
