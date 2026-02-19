@@ -6,7 +6,7 @@ import { Location, Corner, Arena, CASTER_SCALE } from './arena'
 
 import * as Utils from './sceneUtils'
 
-import { MQTTBroker, parseBrokerMessage } from './mqtt';
+import { MQTTClient, parseBrokerMessage } from './mqtt';
 
 const url = "wss://ugo-linux:9001";
 const opts = {
@@ -20,7 +20,7 @@ const publishers = [
     "robots/+/position"
 ]
 
-const broker = new MQTTBroker(url, opts);
+const broker = new MQTTClient(url, opts);
 broker.connect(publishers);
 
 const FOV = 75;

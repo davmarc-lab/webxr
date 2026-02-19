@@ -7,7 +7,7 @@ function log(message) {
 /**
  * Parse a json message received from mqtt.
  * 
- * @param {string} msg The message to parse.
+ * @param {String} msg The message to parse.
  * @returns A Json formatted string.
  */
 function parseBrokerMessage(msg) {
@@ -15,9 +15,9 @@ function parseBrokerMessage(msg) {
 }
 
 /**
- * Implemetation of a simple mqtt broker listening to a list of publishers.
+ * Implemetation of a simple mqtt client listening to a list of publishers.
  */
-class MQTTBroker {
+class MQTTClient {
     #url;
     #options;
 
@@ -26,7 +26,7 @@ class MQTTBroker {
     /**
      * Creates a mqtt client connected to the given server with custom options.
      * 
-     * @param {string} url Mqtt broker url.
+     * @param {String} url Mqtt broker url.
      * @param {mqtt.IClientOptions} opts Mqtt client options.
      */
     constructor(url, opts) {
@@ -90,7 +90,7 @@ class MQTTBroker {
     /**
      * Callback function called everytime a message is received from a specific publisher.
      * 
-     * @param {string} topic Topic received.
+     * @param {String} topic Topic received.
      * @param {Uint8Array} message Bytes representing the message received.
      */
     onMessage(topic, message) {
@@ -106,6 +106,6 @@ class MQTTBroker {
 }
 
 export {
-    MQTTBroker,
+    MQTTClient,
     parseBrokerMessage
 }

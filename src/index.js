@@ -12,7 +12,7 @@ import { Location, Corner, Arena, CASTER_SCALE } from './arena'
 
 import * as Utils from './sceneUtils'
 
-import { MQTTBroker, parseBrokerMessage } from './mqtt';
+import { MQTTClient, parseBrokerMessage } from './mqtt';
 
 function log(message) {
     fetch(`/log?${encodeURI(message)}`);
@@ -75,7 +75,7 @@ const topics = [
     "robots/+/position"
 ]
 
-const url = "wss://ugo-linux:9001";
+const url = "wss://localhost:9001";
 const opts = {
     protocol: "wss",
     clean: true,
@@ -84,7 +84,7 @@ const opts = {
 }
 
 // create connection to the mqtt broker
-const broker = new MQTTBroker(url, opts);
+const broker = new MQTTClient(url, opts);
 broker.connect(topics);
 
 const simWorldSize = 100;
@@ -244,12 +244,11 @@ async function createArena(bestValues = true) {
             const json = parseBrokerMessage(msg);
 
             const rId = json.robot_id;
-            // const arenaPos = new THREE.Vector3(json.x * (100 / simWorldSize), json.y / simWorldSize, 0);
             const simPos = { x: json.x, y: json.y };
             const orient = json.orientation;
 
             // convert simulated arena coords into arena coords
-            const normPos = Arena.normalizeSimulatedPos(arena, new THREE.Vector3(simPos.x, simPos.y, 0));
+            const normPos = Arena.normalizeSimulatedPos(arena, simPos);
 
             // is robot already in arena?
             if (!arena.hasRobot(rId)) {

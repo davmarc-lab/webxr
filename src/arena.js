@@ -14,22 +14,22 @@ const CASTER_SCALE = new THREE.Vector3(1, 1, 1);
  * Enum-like class representing valid corner locations.
  */
 class Location {
-    /** @type {string} */
+    /** @type {String} */
     static TOP_LEFT = "Top Left";
 
-    /** @type {string} */
+    /** @type {String} */
     static TOP_RIGHT = "Top Right";
 
-    /** @type {string} */
+    /** @type {String} */
     static BOT_LEFT = "Bot Left";
 
-    /** @type {string} */
+    /** @type {String} */
     static BOT_RIGHT = "Bot Right";
 
     /**
      * Checks whether a given value is a valid Location.
      *
-     * @param {string} location Location value to validate.
+     * @param {String} location Location value to validate.
      * @returns {boolean} True if the location is valid.
      */
     static isValid(location) {
@@ -52,14 +52,14 @@ class Corner {
     rotation;
 
     /**
-     * @type {string}
+     * @type {String}
      */
     location;
 
     /**
      * @param {THREE.Vector3} position Position of the corner in world space.
      * @param {THREE.Vector3} rotation Rotation of the corner in world space.
-     * @param {string} location Logical corner location (must be a value from {@link Location}).
+     * @param {String} location Logical corner location (must be a value from {@link Location}).
      */
     constructor(position, rotation, location) {
         if (!position.isVector3) throw new Error("The given position must be a `THREE.Vector3`");
@@ -330,9 +330,9 @@ class Arena {
         }
 
         // Matrix basis
-        // robot basis matrix
+        // robot rotation matrix
         const rb = new THREE.Matrix4().makeBasis(ROBOT_RIGHT, ROBOT_BASE, ROBOT_FRONT);
-        // plane basis matrix
+        // plane rotation matrix
         const tb = new THREE.Matrix4().makeBasis(this.#axes.x, this.#axes.z.clone().negate(), this.#axes.y);
 
         // mat * rb = tb => mat = tb / rb = tb * 1/rb = tb * inverse(rb)
@@ -416,7 +416,7 @@ class Arena {
         const xfactor = arena.arenaSizes.x / arena.simulatedSize;
         const yfactor = arena.arenaSizes.y / arena.simulatedSize;
 
-        return new THREE.Vector3(position.x * xfactor, position.y * yfactor, position.z);
+        return new THREE.Vector3(position.x * xfactor, position.y * yfactor, 0);
     }
 
     /**
