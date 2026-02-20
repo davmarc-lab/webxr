@@ -12,14 +12,14 @@ class Robot {
      * Robot gltf loaded group.
      * @type {THREE.Group}
      */
-    mesh;
+    #mesh;
 
     /**
      * Robot y-axis orientation angle in radians.
      * 
      * @type {number}
      */
-    orientation;
+    #orientation;
 
     /**
      * Creates a new Robot instance.
@@ -29,9 +29,9 @@ class Robot {
      * @param {number} orientation The robot y-axis angle in radians.
      */
     constructor(id, mesh, orientation) {
-        this.id = id;
-        this.mesh = mesh;
-        this.orientation = orientation;
+        this.#id = id;
+        this.#mesh = mesh;
+        this.#orientation = orientation;
     }
 
     /**
@@ -39,7 +39,29 @@ class Robot {
      * 
      * @returns {number} The robot id.
      */
-    getId() { return this.id; }
+    getId() { return this.#id; }
+
+    getPosition() { return this.#mesh.position; }
+
+    setPosition(position) {
+        this.#mesh.position.copy(position);
+    }
+
+    move(offset) {
+        this.#mesh.position.add(offset);
+    }
+
+    getOrientation() { return this.#orientation; }
+
+    setRotationMatrix(matrix) {
+        this.#mesh.rotation.setFromRotationMatrix(matrix);
+    }
+
+    orient(axis, orient) {
+        const offset = this.#orientation - orient;
+        this.#orientation = orient;
+        this.#mesh.rotateOnAxis(axis, offset);
+    }
 }
 
 export {

@@ -156,9 +156,7 @@ function getCameraImage() {
     imageScene.background = camText;
     imageScene.background.needsUpdate = true;
 
-    const old = renderer.getRenderTarget();
     const imageData = Utils.snapshot(renderer, camera, imageScene);
-    renderer.setRenderTarget(old);
 
     // debugImage(imageData);
     return imageData;
@@ -224,6 +222,7 @@ async function createArena(bestValues = true) {
         if (!loc) return;
 
         const pos = bestValues ? t.getBestPosition() : t.getAlternativePosition()
+        // handle camera world trasformations, not calculated during pose estimation
         pos.applyMatrix4(camera.matrixWorld);
         const rot = bestValues ? t.getBestRotation() : t.getAlternativeRotation()
 

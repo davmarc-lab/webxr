@@ -8,7 +8,7 @@ import * as Utils from './sceneUtils'
 
 import { MQTTClient, parseBrokerMessage } from './mqtt';
 
-const url = "wss://ugo-linux:9001";
+const url = "wss://localhost:9001";
 const opts = {
     protocol: "wss",
     clean: true,
@@ -83,23 +83,11 @@ async function init() {
     arena.createCasters();
     scene.add(arena.getArena());
 
-    const pos = new THREE.Vector3(0.2531596792933619, 0.2249379392091934, -0.9680244775065864);
-    console.log(pos);
-    pos.applyMatrix4(camera.matrixWorld);
-    console.log(pos);
-
-    camera.modelViewMatrix
-
     broker.onMessage = async (topic, msg) => {
         // json parsed content of mqtt message
         const json = parseBrokerMessage(msg);
-        const pos = new THREE.Vector3(0.2531596792933619, 0.2249379392091934, -0.9680244775065864);
-        console.log(pos);
-        pos.applyMatrix4(camera.modelViewMatrix);
-        console.log(pos);
 
         const rId = json.robot_id;
-        // const arenaPos = new THREE.Vector3(json.x * (100 / simWorldSize), json.y / simWorldSize, 0);
         const simPos = { x: json.x, y: json.y };
         const orient = json.orientation;
 

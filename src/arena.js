@@ -81,7 +81,7 @@ class Corner {
  *
  * @see Arena
  */
-class ArenaAxis {
+class ArenaAxes {
     /**
      * @type {THREE.Vector3}
      */
@@ -98,10 +98,11 @@ class ArenaAxis {
     z;
 
     /**
-     * Creates a new ArenaAxis instance.
+     * Creates a new ArenaAxes instance.
      *
      * @param {THREE.Vector3} x Normalized vector representing the X axis.
      * @param {THREE.Vector3} y Normalized vector representing the Y axis.
+     * @param {THREE.Vector3} z Normalized vector representing the Z axis.
      */
     constructor(x, y, z) {
         this.x = x;
@@ -144,19 +145,17 @@ class Arena {
      * 
      * @type {Array<Corner>}
      */
-    corners;
-
-    simulatedSize;
+    #corners;
 
     /** 
      * @type {Array<THREE.Object3D>}
      */
-    casters;
+    #casters;
 
     /** 
      * @type {THREE.Object3D}
      */
-    arena;
+    #arena;
 
     /**
      * Arena center point coordinates.
@@ -176,7 +175,7 @@ class Arena {
     /**
      * Axes for the arena coordinate system.
      * 
-     * @type {ArenaAxis}
+     * @type {ArenaAxes}
      */
     #axes;
 
@@ -192,6 +191,18 @@ class Arena {
      */
     #robots;
 
+    /** 
+     * @type {THREE.Vector2}
+     */
+    #arenaSize;
+
+    /**
+     * @type {boolean}
+     */
+    #isSizeOk;
+
+    #simulatedSize;
+
     /**
      * Creates a new Arena instance.
      *
@@ -205,13 +216,13 @@ class Arena {
         if (corners === undefined) throw new Error("Missing arena corners");
         if (corners.length != 4) throw new Error("Corners must be of size 4 -> given `" + corners.length + "`");
 
-        this.corners = corners;
-        this.simulatedSize = simulatedSize;
-        this.arenaSizes = new THREE.Vector3();
-        this.isSizesOk = false;
-        this.casters = [];
+        this.#corners = corners;
+        this.#simulatedSize = simulatedSize;
+        this.#arenaSize = new THREE.Vector2();
+        this.#isSizeOk = false;
+        this.#casters = [];
 
-        this.arena = new THREE.Object3D();
+        this.#arena = new THREE.Object3D();
 
         this.#origin = new THREE.Vector3(0, 0, 0);
         this.#isOriginOk = false;
@@ -231,9 +242,9 @@ class Arena {
      * A caster is a mesh associated to one corner.
      */
     createCasters() {
-        this.corners.forEach(c => this.casters.push(createCube(c.position, CASTER_SCALE, c.rotation)));
-        this.casters.forEach(c => this.arena.add(c));
-        this.casters.forEach(e => e.add(createAxis()));
+        this.#corners.forEach(c => this.#casters.push(createCube(c.position, CASTER_SCALE, c.rotation)));
+        this.#casters.forEach(c => this.#arena.add(c));
+        this.#casters.forEach(e => e.add(createAxis()));
     }
 
     /**
@@ -242,11 +253,11 @@ class Arena {
      * @returns {Array<THREE.Object3D> | undefined} The array of all casters.
      */
     getCasters() {
-        if (this.casters === undefined) {
+        if (this.#casters === undefined) {
             console.error("[ERROR] Casters are not initialized, call `createCasters()`");
             return undefined;
         }
-        return this.casters;
+        return this.#casters;
     }
 
     /**
@@ -254,14 +265,14 @@ class Arena {
      * 
      * @returns {Array<Corner>} The arena corners.
      */
-    getCorners() { return this.corners; }
+    getCorners() { return this.#corners; }
 
     /**
      * Retrieves the arena mesh.
      * 
      * @returns {THREE.Object3D} The arena mesh.
      */
-    getArena() { return this.arena; }
+    getArena() { return this.#arena; }
 
     /**
      * Retrieves the arena origin point.
@@ -294,9 +305,9 @@ class Arena {
      * This is not generic, in fact it needs to know which one is the top left corner or
      * whic one is the top right corner etc.
      * 
-     * @returns {ArenaAxis} The arena relative axes.
+     * @returns {ArenaAxes} The arena relative axes.
      */
-    getArenaAxis() {
+    getArenaAxes() {
         if (this.#isAxesOk) return this.#axes;
 
         this.#estimateArenaAxes();
@@ -350,7 +361,7 @@ class Arena {
         this.#robots.push(robot);
 
         // add the new robot mesh to the arena
-        this.arena.add(mesh);
+        this.#arena.add(mesh);
     }
 
     /**
@@ -360,7 +371,7 @@ class Arena {
      * @returns True if the robot exists.
      */
     hasRobot(id) {
-        return this.#robots.find(r => r.id == id) !== undefined;
+        return this.#robots.find(r => r.getId() == id) !== undefined;
     }
 
     /**
@@ -371,10 +382,10 @@ class Arena {
      */
     moveRobot(id, position) {
         // find the given robot
-        const robot = this.#robots.find(r => r.id === id);
+        const robot = this.#robots.find(r => r.getId() === id);
         if (robot) {
             // update robot position if it exists
-            robot.mesh.position.copy(this.#calcRelativePosition(position));
+            robot.setPosition(this.#calcRelativePosition(position));
         }
     }
 
@@ -390,12 +401,9 @@ class Arena {
         // calculates arena axes if needed
         if (!this.#isAxesOk) this.#estimateArenaAxes();
 
-        const robot = this.#robots.find(r => r.id === id);
-
+        const robot = this.#robots.find(r => r.getId() === id);
         if (robot) {
-            const offset = robot.orientation - orient;
-            robot.orientation = orient;
-            robot.mesh.rotateOnAxis(this.#axes.y, offset);
+            robot.orient(this.#axes.y, orient)
         }
     }
 
@@ -408,13 +416,20 @@ class Arena {
      */
     moveRobotByOffset(id, offset) {
         // using forEach to avoid getting the first (array[0])
-        this.#robots.filter(r => r.id === id)
-            .forEach(r => r.mesh.position.add(this.#calcRelativeOffset(offset)));
+        this.#robots.filter(r => r.getId() === id)
+            .forEach(r => r.move(this.#calcRelativeOffset(offset)));
     }
 
+    getArenaSize() { return this.#arenaSize; }
+
+    getSimulatedSize() { return this.#simulatedSize; }
+
     static normalizeSimulatedPos(arena, position) {
-        const xfactor = arena.arenaSizes.x / arena.simulatedSize;
-        const yfactor = arena.arenaSizes.y / arena.simulatedSize;
+        const arenaSize = arena.getArenaSize();
+        const simSize = arena.getSimulatedSize();
+
+        const xfactor = arenaSize.x / simSize;
+        const yfactor = arenaSize.y / simSize;
 
         return new THREE.Vector3(position.x * xfactor, position.y * yfactor, 0);
     }
@@ -430,7 +445,7 @@ class Arena {
     #getCornerFromLocation(location) {
         if (!Location.isValid(location)) return undefined;
 
-        return this.corners.find(c => c.location == location);
+        return this.#corners.find(c => c.location == location);
     }
 
     /**
@@ -438,14 +453,14 @@ class Arena {
      * The origin correspond to the centroid of the square delimited by the corners.
      */
     #estimateArenaOrigin() {
-        const x = this.#calculateCentroid(this.corners.map(p => p.position.x));
-        const y = this.#calculateCentroid(this.corners.map(p => p.position.y));
-        const z = this.#calculateCentroid(this.corners.map(p => p.position.z));
+        const x = this.#calculateCentroid(this.#corners.map(p => p.position.x));
+        const y = this.#calculateCentroid(this.#corners.map(p => p.position.y));
+        const z = this.#calculateCentroid(this.#corners.map(p => p.position.z));
 
         this.#origin = new THREE.Vector3(x, y, z);
         this.#isOriginOk = true;
 
-        this.arena.position.set(this.#origin.x, this.#origin.y, this.#origin.z);
+        this.#arena.position.set(this.#origin.x, this.#origin.y, this.#origin.z);
     }
 
     /**
@@ -464,7 +479,7 @@ class Arena {
         const botLeft = this.#getCornerFromLocation(Location.BOT_LEFT);
         const yaxis = new THREE.Vector3().subVectors(topLeft.position, botLeft.position).normalize();
 
-        this.#axes = new ArenaAxis(xaxis, yaxis, new THREE.Vector3().crossVectors(xaxis, yaxis));
+        this.#axes = new ArenaAxes(xaxis, yaxis, new THREE.Vector3().crossVectors(xaxis, yaxis));
         this.#isAxesOk = true;
     }
 
@@ -527,18 +542,18 @@ class Arena {
     }
 
     #calcArenaSizes() {
-        if (this.isSizesOk) return;
+        if (this.#isSizeOk) return;
 
-        const left = this.corners.find(c => c.location == Location.TOP_LEFT).position;
-        const bot = this.corners.find(c => c.location == Location.BOT_LEFT).position;
-        const right = this.corners.find(c => c.location == Location.TOP_RIGHT).position;
+        const left = this.#corners.find(c => c.location == Location.TOP_LEFT).position;
+        const bot = this.#corners.find(c => c.location == Location.BOT_LEFT).position;
+        const right = this.#corners.find(c => c.location == Location.TOP_RIGHT).position;
 
         // calculates the total length of the arena and divide by 2 because the center is in the middle
         const xdist = left.distanceTo(right) / 2;
         const ydist = left.distanceTo(bot) / 2;
 
-        this.arenaSizes = new THREE.Vector2(xdist, ydist);
-        this.isSizesOk = true;
+        this.#arenaSize = new THREE.Vector2(xdist, ydist);
+        this.#isSizeOk = true;
     }
 }
 
