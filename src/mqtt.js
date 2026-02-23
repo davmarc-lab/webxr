@@ -1,4 +1,5 @@
 import mqtt from "mqtt";
+import { EventEmitter } from "events"
 
 function log(message) {
     fetch(`/log?${encodeURI(message)}`);
@@ -17,7 +18,7 @@ function parseBrokerMessage(msg) {
 /**
  * Implemetation of a simple mqtt client listening to a list of publishers.
  */
-class MQTTClient {
+class MQTTClient extends EventEmitter {
     #url;
     #options;
 
@@ -30,10 +31,11 @@ class MQTTClient {
      * @param {mqtt.IClientOptions} opts Mqtt client options.
      */
     constructor(url, opts) {
+        super();
+
         this.#url = url;
         if (opts !== undefined)
             this.#options = opts;
-
         this.#client = {};
     }
 
@@ -53,7 +55,10 @@ class MQTTClient {
             this.subscribe(topics);
         });
 
-        this.#client.on('message', (topic, message) => this.onMessage(topic, message));
+        this.#client.on('message', (topic, message) => this.emit('message', topic, message));
+        this.#client.on('connect', _ => this.emit('connect'));
+        this.#client.on('reconnect', _ => this.emit('reconnect'));
+        this.#client.on('close', _ => this.emit('close'));
     }
 
     /**
@@ -85,16 +90,6 @@ class MQTTClient {
                 console.log("Subscribed to " + topics);
             });
         }
-    }
-
-    /**
-     * Callback function called everytime a message is received from a specific publisher.
-     * 
-     * @param {String} topic Topic received.
-     * @param {Uint8Array} message Bytes representing the message received.
-     */
-    onMessage(topic, message) {
-        console.log(topic + " => " + message.toString());
     }
 
     /**

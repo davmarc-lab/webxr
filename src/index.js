@@ -45,6 +45,7 @@ const canvas = document.getElementById("scene");
 const divUi = document.getElementById("ui");
 const divCorners = document.getElementById("corners");
 const pTrk = document.getElementById("tracked");
+const pStatus = document.getElementById("mqtt");
 const pCal = document.getElementById("calibrated");
 const btnCal = document.getElementById("calibrate");
 
@@ -80,12 +81,29 @@ const opts = {
     protocol: "wss",
     clean: true,
     connectTimeout: 4000,
+    reconnectPeriod: 2000,
     rejectUnauthorized: true
 }
 
 // create connection to the mqtt broker
 const broker = new MQTTClient(url, opts);
 broker.connect(topics);
+
+// callbacks
+broker.on('connect', _ => {
+    pStatus.style.color = "green";
+    pStatus.innerText = "Status: Connected";
+});
+
+broker.on('reconnect', _ => {
+    pStatus.style.color = "orange";
+    pStatus.innerText = "Status: Reconnecting...";
+});
+
+broker.on('close', _ => {
+    pStatus.style.color = "red";
+    pStatus.innerText = "Status: Disconnected";
+});
 
 const simWorldSize = 100;
 
@@ -238,7 +256,7 @@ async function createArena(bestValues = true) {
     arenaCreated = corners.length == 4;
     if (arenaCreated) {
         log("Registering callback");
-        broker.onMessage = async (topic, msg) => {
+        broker.on('message', async (topic, msg) => {
             // json parsed content of mqtt message
             const json = parseBrokerMessage(msg);
 
@@ -259,7 +277,7 @@ async function createArena(bestValues = true) {
 
             // robot arena y-axis orientation
             arena.orientRobot(rId, orient)
-        };
+        });
     }
 }
 

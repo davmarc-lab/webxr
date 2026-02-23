@@ -8,11 +8,14 @@ import * as Utils from './sceneUtils'
 
 import { MQTTClient, parseBrokerMessage } from './mqtt';
 
+const pStatus = document.getElementById("mqtt");
+
 const url = "wss://localhost:9001";
 const opts = {
     protocol: "wss",
     clean: true,
     connectTimeout: 4000,
+    reconnectPeriod: 2000,
     rejectUnauthorized: true
 }
 
@@ -22,6 +25,22 @@ const publishers = [
 
 const broker = new MQTTClient(url, opts);
 broker.connect(publishers);
+
+// callbacks
+broker.on('connect', _ => {
+    pStatus.style.color = "green";
+    pStatus.innerText = "Status: Connected";
+});
+
+broker.on('reconnect', _ => {
+    pStatus.style.color = "orange";
+    pStatus.innerText = "Status: Reconnecting...";
+});
+
+broker.on('close', _ => {
+    pStatus.style.color = "red";
+    pStatus.innerText = "Status: Disconnected";
+});
 
 const FOV = 75;
 const NEAR = 0.1;
@@ -83,7 +102,7 @@ async function init() {
     arena.createCasters();
     scene.add(arena.getArena());
 
-    broker.onMessage = async (topic, msg) => {
+    broker.on('message', async (t, msg) => {
         // json parsed content of mqtt message
         const json = parseBrokerMessage(msg);
 
@@ -104,7 +123,7 @@ async function init() {
 
         // robot arena y-axis orientation
         arena.orientRobot(rId, orient)
-    };
+    });
 
     renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
     camera.position.z = 5;

@@ -4,20 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ThreeJS - Arena</title>
+    <title>Posit Test</title>
     <link href="css/style.css" rel="stylesheet">
 </head>
 
 <body>
     <script type="text/javascript" src="/node_modules/js-aruco2/src/svd.js"></script>
     <script type="text/javascript" src="/node_modules/js-aruco2/src/posit2.js"></script>
-    <script type="module" src="/src/index.js"></script>
+    <script type="module" src="/src/postest.js"></script>
     <canvas id="scene"></canvas>
     <div id="ui">
         <button id="calibrate" style="display: none;">Calibrate</button>
         <p id="tracked">Tracked: 0</p>
         <p id="calibrated">Calibrated: false</p>
         <p id="mqtt" style="color: red;">Status: Disconnected</p>
+        <button id="snap">Snap</button>
+        <button id="est">Posit</button>
     </div>
 </body>
 
