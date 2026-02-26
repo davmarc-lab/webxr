@@ -22,7 +22,7 @@ function log(message) {
 const detector = new AR.Detector({
     dictionaryName: "ARUCO"
 });
-const modelSize = 0.1;
+const modelSize = 0.042;
 
 let calibrated = false;
 /**
@@ -34,7 +34,7 @@ const FOV = 45;
 const NEAR = 0.1;
 const FAR = 1000;
 
-let scene, camera, renderer, arena;
+let scene, camera, renderer, arena = undefined;
 
 // camera scene
 let imageScene;
@@ -76,7 +76,7 @@ const topics = [
     "robots/+/position"
 ]
 
-const url = "wss://localhost:9001";
+const url = "wss://frank:9001";
 const opts = {
     protocol: "wss",
     clean: true,
@@ -86,21 +86,21 @@ const opts = {
 }
 
 // create connection to the mqtt broker
-const broker = new MQTTClient(url, opts);
-broker.connect(topics);
+const client = new MQTTClient(url, opts);
+client.connect(topics);
 
 // callbacks
-broker.on('connect', _ => {
+client.on('connect', _ => {
     pStatus.style.color = "green";
     pStatus.innerText = "Status: Connected";
 });
 
-broker.on('reconnect', _ => {
+client.on('reconnect', _ => {
     pStatus.style.color = "orange";
     pStatus.innerText = "Status: Reconnecting...";
 });
 
-broker.on('close', _ => {
+client.on('close', _ => {
     pStatus.style.color = "red";
     pStatus.innerText = "Status: Disconnected";
 });
@@ -134,8 +134,10 @@ async function init() {
 
     btnCal.addEventListener("click", _ => {
         calibrated = false;
-        pCal.innerText = "Calibrated: false";
         tracked = [];
+        arenaCreated = false;
+        busyArena = false;
+        pCal.innerText = "Calibrated: false";
     });
 }
 
@@ -229,9 +231,9 @@ function updateUi(cubes) {
     });
 }
 
-let flag = false;
+let busyArena = false;
 async function createArena(bestValues = true) {
-    flag = true;
+    busyArena = true;
     // find right corners
     const corners = [];
 
@@ -247,16 +249,27 @@ async function createArena(bestValues = true) {
         corners.push(new Corner(pos, rot, loc));
     })
 
+    // clear arena corners if already exist
+    if (arena) {
+        // remove arena system from the scene
+        const arenaObj = arena.getArena();
+        scene.remove(arenaObj);
+        // clear arena corners
+        arena.clearCorners();
+        log("CLEAR")
+    }
+
     arena = new Arena(corners, simWorldSize);
     CASTER_SCALE.set(modelSize, modelSize, modelSize);
     arena.createCasters();
+    log("CASTERS")
 
     scene.add(arena.getArena());
 
     arenaCreated = corners.length == 4;
     if (arenaCreated) {
         log("Registering callback");
-        broker.on('message', async (topic, msg) => {
+        client.on('message', async (topic, msg) => {
             // json parsed content of mqtt message
             const json = parseBrokerMessage(msg);
 
@@ -291,7 +304,7 @@ function update(time) {
         trackMarkers(markers);
     }
 
-    if (!flag && calibrated && !arenaCreated) {
+    if (!busyArena && calibrated && !arenaCreated) {
         // create arena
         createArena();
     }

@@ -91,6 +91,10 @@ const reqFeats = [];
 
 const simWorldSize = 100;
 
+const timer = new THREE.Clock(false);
+let count = 0;
+let res = { times: [] };
+let printed = false
 async function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
@@ -103,6 +107,7 @@ async function init() {
     scene.add(arena.getArena());
 
     broker.on('message', async (t, msg) => {
+        timer.start();
         // json parsed content of mqtt message
         const json = parseBrokerMessage(msg);
 
@@ -123,6 +128,16 @@ async function init() {
 
         // robot arena y-axis orientation
         arena.orientRobot(rId, orient)
+        const time = timer.getDelta();
+            if (time != 0 && res.times.length < 1000 && count >= 2000) {
+            res.times.push(time);
+        } else {
+            if (res.times.length == 1000 && !printed) {
+                console.log(res);
+                printed = true;
+            }
+        }
+        count++;
     });
 
     renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
@@ -149,6 +164,12 @@ function render() {
 function loop(time) {
     update();
     render();
+    // if (t != 0 && count >= 100 && count < 200) {
+    //     json.times.push(t);
+    //     count++;
+    // } else {
+    //     console.log(json);
+    // }
 }
 
 await init();

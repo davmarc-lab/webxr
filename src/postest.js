@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { AR } from 'js-aruco2'
 
 import { Marker } from './marker'
+import { Location, Corner, Arena, CASTER_SCALE } from './arena'
 
 import * as Utils from './sceneUtils'
 import { createCube } from './helper';
@@ -13,7 +14,29 @@ const FOV = 75;
 const NEAR = 0.1;
 const FAR = 1000;
 
-let scene, camera, renderer;
+let scene, camera, renderer, arena;
+let tracked, corners;
+
+const simWorldSize = 100;
+
+const locations = [
+    {
+        id: 0,
+        loc: Location.TOP_LEFT
+    },
+    {
+        id: 1,
+        loc: Location.TOP_RIGHT
+    },
+    {
+        id: 2,
+        loc: Location.BOT_LEFT
+    },
+    {
+        id: 3,
+        loc: Location.BOT_RIGHT
+    },
+];
 
 // aruco detector
 const detector = new AR.Detector({
@@ -38,6 +61,9 @@ function log(message) {
     fetch(`/log?${encodeURI(message)}`);
 }
 
+const timer = new THREE.Clock(false);
+const times = [];
+
 async function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, NEAR, FAR);
@@ -47,10 +73,9 @@ async function init() {
     camera.position.z = -100;
 
     renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
-    renderer.xr.enabled = true;
     camera.position.z = 5;
 
-    // const controls = new OrbitControls(camera, renderer.domElement);
+    const controls = new OrbitControls(camera, renderer.domElement);
 
     document.body.appendChild(ARButton.createButton(renderer, {
         requiredFeatures: reqFeats,
@@ -58,20 +83,29 @@ async function init() {
         domOverlay: { root: divUi }
     }));
 
-    // const textureLoader = new THREE.TextureLoader();
-    // const bgTexture = textureLoader.load("/assets/single-marker.jpeg");
-    // scene.background = bgTexture;
+    const textureLoader = new THREE.TextureLoader();
+    const bgTexture = textureLoader.load("/assets/arena.png");
+    scene.background = bgTexture;
 
     // background snapshot
 
     snap.addEventListener('click', _ => {
-        image = undefined;
+        // timer.start();
+        image = Utils.snapshot(renderer, camera, scene);
+        // const t = timer.getElapsedTime();
+        // times.push(t);
         posit = new POS.Posit(modelSize, renderer.domElement.width);
     });
 
     est.addEventListener('click', _ => {
-        if (!image) return;
+        timer.start();
         const markers = detector.detect(image);
+        const t = timer.getElapsedTime();
+        times.push(t);
+        console.log(times);
+
+        tracked = [];
+        corners = [];
 
         markers.forEach(m => {
             let corners = m.corners;
@@ -84,13 +118,43 @@ async function init() {
 
             const pose = posit.pose(corners);
             const t = new Marker(m.id, pose);
-            const pos = t.getBestPosition();
-            const err = pose.bestError;
-            log("ID: " + t.getId() + "\n\tErr: " + err +
-                "\n\tPos: " + pos.x + ", " + pos.y + ", " + pos.z);
-            // scene.add(createCube(pos.applyMatrix4(camera.matrixWorld), new THREE.Vector3(modelSize, modelSize, modelSize), t.getBestRotation()));
+
+            if (tracked.find(e => e.getId() == t.getId()) === undefined) {
+                tracked.push(t);
+
+                const pos = t.getBestPosition();
+                log("ID: " + t.getId() + " => " + pos.x + ", " + pos.y + ", " + pos.z);
+            }
+
+            // const err = pose.bestError;
+            // log("ID: " + t.getId() + "\n\tErr: " + err +
+            //     "\n\tPos: " + pos.x + ", " + pos.y + ", " + pos.z);
         });
 
+        tracked.forEach(t => {
+            const loc = locations.find(l => l.id == t.getId()).loc;
+            if (!loc) return;
+
+            const pos = t.getBestPosition();
+            // handle camera world trasformations, not calculated during pose estimation
+            pos.applyMatrix4(camera.matrixWorld);
+            const rot = t.getBestRotation();
+
+            corners.push(new Corner(pos, rot, loc));
+        });
+
+        if (arena) {
+            const arenaObj = arena.getArena();
+            scene.remove(arenaObj);
+            arena.clearCorners();
+        }
+
+        arena = new Arena(corners, simWorldSize);
+        CASTER_SCALE.set(modelSize, modelSize, modelSize);
+        arena.createCasters();
+        log("CASTERS")
+
+        scene.add(arena.getArena());
     });
 }
 
@@ -125,11 +189,10 @@ function getCameraImage() {
 }
 
 function update() {
-
-    if (renderer.info.render.frame % 100 == 0 && image === undefined) {
-        image = getCameraImage();
-        log("Snap");
-    }
+    // if (renderer.info.render.frame % 100 == 0 && image === undefined) {
+    //     image = getCameraImage();
+    //     log("Snap");
+    // }
 }
 
 function render() {

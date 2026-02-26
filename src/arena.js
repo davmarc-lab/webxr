@@ -44,17 +44,17 @@ class Corner {
     /**
      * @type {THREE.Vector3}
      */
-    position;
+    #position;
 
     /**
      * @type {THREE.Vector3}
      */
-    rotation;
+    #rotation;
 
     /**
      * @type {String}
      */
-    location;
+    #location;
 
     /**
      * @param {THREE.Vector3} position Position of the corner in world space.
@@ -63,14 +63,20 @@ class Corner {
      */
     constructor(position, rotation, location) {
         if (!position.isVector3) throw new Error("The given position must be a `THREE.Vector3`");
-        this.position = position;
+        this.#position = position;
 
         if (!rotation.isVector3) throw new Error("The given rotation must be a `THREE.Vector3`");
-        this.rotation = rotation;
+        this.#rotation = rotation;
 
         if (!Location.isValid(location)) throw new Error("The given location is not valid (it must be of type `Location`)");
-        this.location = location;
+        this.#location = location;
     }
+
+    getPosition() { return this.#position.clone(); }
+
+    getRotation() { return this.#rotation.clone(); }
+
+    getLocation() { return this.#location; }
 }
 
 /**
@@ -85,17 +91,17 @@ class ArenaAxes {
     /**
      * @type {THREE.Vector3}
      */
-    x;
+    #x;
 
     /**
      * @type {THREE.Vector3}
      */
-    y;
+    #y;
 
     /**
      * @type {THREE.Vector3}
      */
-    z;
+    #z;
 
     /**
      * Creates a new ArenaAxes instance.
@@ -105,10 +111,16 @@ class ArenaAxes {
      * @param {THREE.Vector3} z Normalized vector representing the Z axis.
      */
     constructor(x, y, z) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
+        this.#x = x;
+        this.#y = y;
+        this.#z = z;
     }
+
+    getX() { return this.#x.clone(); }
+    
+    getY() { return this.#y.clone(); }
+
+    getZ() { return this.#z.clone(); }
 }
 
 /**
@@ -242,7 +254,8 @@ class Arena {
      * A caster is a mesh associated to one corner.
      */
     createCasters() {
-        this.#corners.forEach(c => this.#casters.push(createCube(c.position, CASTER_SCALE, c.rotation)));
+        this.#casters = [];
+        this.#corners.forEach(c => this.#casters.push(createCube(c.getPosition(), CASTER_SCALE, c.getRotation())));
         this.#casters.forEach(c => this.#arena.add(c));
         this.#casters.forEach(e => e.add(createAxis()));
     }
@@ -344,7 +357,7 @@ class Arena {
         // robot rotation matrix
         const rb = new THREE.Matrix4().makeBasis(ROBOT_RIGHT, ROBOT_BASE, ROBOT_FRONT);
         // plane rotation matrix
-        const tb = new THREE.Matrix4().makeBasis(this.#axes.x, this.#axes.z.clone().negate(), this.#axes.y);
+        const tb = new THREE.Matrix4().makeBasis(this.#axes.getX(), this.#axes.getZ().negate(), this.#axes.getY());
 
         // mat * rb = tb => mat = tb / rb = tb * 1/rb = tb * inverse(rb)
         const mat = new THREE.Matrix4().multiplyMatrices(tb, rb.clone().invert());
@@ -355,7 +368,7 @@ class Arena {
         const robot = new Robot(id, mesh, orientation);
 
         // adjust mesh orientation
-        mesh.rotateOnAxis(this.#axes.y, orientation);
+        mesh.rotateOnAxis(this.#axes.getY(), orientation);
 
         // add the new robot to the tracked ones
         this.#robots.push(robot);
@@ -403,7 +416,7 @@ class Arena {
 
         const robot = this.#robots.find(r => r.getId() === id);
         if (robot) {
-            robot.orient(this.#axes.y, orient)
+            robot.orient(this.#axes.getY(), orient)
         }
     }
 
@@ -423,6 +436,14 @@ class Arena {
     getArenaSize() { return this.#arenaSize; }
 
     getSimulatedSize() { return this.#simulatedSize; }
+
+    clearCorners() {
+        // remove corners and flags for updating
+        this.#corners = [];
+        this.#isAxesOk = false;
+        this.#isOriginOk = false;
+        this.#isSizeOk = false;
+    }
 
     static normalizeSimulatedPos(arena, position) {
         const arenaSize = arena.getArenaSize();
@@ -445,7 +466,7 @@ class Arena {
     #getCornerFromLocation(location) {
         if (!Location.isValid(location)) return undefined;
 
-        return this.#corners.find(c => c.location == location);
+        return this.#corners.find(c => c.getLocation() == location);
     }
 
     /**
@@ -453,9 +474,9 @@ class Arena {
      * The origin correspond to the centroid of the square delimited by the corners.
      */
     #estimateArenaOrigin() {
-        const x = this.#calculateCentroid(this.#corners.map(p => p.position.x));
-        const y = this.#calculateCentroid(this.#corners.map(p => p.position.y));
-        const z = this.#calculateCentroid(this.#corners.map(p => p.position.z));
+        const x = this.#calculateCentroid(this.#corners.map(p => p.getPosition().x));
+        const y = this.#calculateCentroid(this.#corners.map(p => p.getPosition().y));
+        const z = this.#calculateCentroid(this.#corners.map(p => p.getPosition().z));
 
         this.#origin = new THREE.Vector3(x, y, z);
         this.#isOriginOk = true;
@@ -474,10 +495,10 @@ class Arena {
     #estimateArenaAxes() {
         const topLeft = this.#getCornerFromLocation(Location.TOP_LEFT);
         const topRight = this.#getCornerFromLocation(Location.TOP_RIGHT);
-        const xaxis = new THREE.Vector3().subVectors(topRight.position, topLeft.position).normalize();
+        const xaxis = new THREE.Vector3().subVectors(topRight.getPosition(), topLeft.getPosition()).normalize();
 
         const botLeft = this.#getCornerFromLocation(Location.BOT_LEFT);
-        const yaxis = new THREE.Vector3().subVectors(topLeft.position, botLeft.position).normalize();
+        const yaxis = new THREE.Vector3().subVectors(topLeft.getPosition(), botLeft.getPosition()).normalize();
 
         this.#axes = new ArenaAxes(xaxis, yaxis, new THREE.Vector3().crossVectors(xaxis, yaxis));
         this.#isAxesOk = true;
@@ -518,8 +539,8 @@ class Arena {
         const robotPos = new THREE.Vector3().copy(this.#origin);
 
         // calculate final position using the given relative position
-        const relx = new THREE.Vector3().copy(this.#axes.x).multiplyScalar(point.x)
-        const rely = new THREE.Vector3().copy(this.#axes.y).multiplyScalar(point.y)
+        const relx = new THREE.Vector3().copy(this.#axes.getX()).multiplyScalar(point.x)
+        const rely = new THREE.Vector3().copy(this.#axes.getY()).multiplyScalar(point.y)
 
         return robotPos.add(relx).add(rely);
     }
@@ -535,8 +556,8 @@ class Arena {
         if (!this.#isAxesOk) this.#estimateArenaAxes();
 
         const relOffset = new THREE.Vector3();
-        const relx = new THREE.Vector3().copy(this.#axes.x).multiplyScalar(offset.x)
-        const rely = new THREE.Vector3().copy(this.#axes.y).multiplyScalar(offset.y)
+        const relx = new THREE.Vector3().copy(this.#axes.getX()).multiplyScalar(offset.x)
+        const rely = new THREE.Vector3().copy(this.#axes.getY()).multiplyScalar(offset.y)
 
         return relOffset.add(relx).add(rely);
     }
@@ -544,9 +565,9 @@ class Arena {
     #calcArenaSizes() {
         if (this.#isSizeOk) return;
 
-        const left = this.#corners.find(c => c.location == Location.TOP_LEFT).position;
-        const bot = this.#corners.find(c => c.location == Location.BOT_LEFT).position;
-        const right = this.#corners.find(c => c.location == Location.TOP_RIGHT).position;
+        const left = this.#corners.find(c => c.getLocation() == Location.TOP_LEFT).getPosition();
+        const bot = this.#corners.find(c => c.getLocation() == Location.BOT_LEFT).getPosition();
+        const right = this.#corners.find(c => c.getLocation() == Location.TOP_RIGHT).getPosition();
 
         // calculates the total length of the arena and divide by 2 because the center is in the middle
         const xdist = left.distanceTo(right) / 2;
